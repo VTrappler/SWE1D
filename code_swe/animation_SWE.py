@@ -67,7 +67,7 @@ def animate_SWE(xr, h, b, D, ylim = [0, 10]):
 
 
 # ------------------------------------------------------------------------------
-def snapshot(h, t=0, xr, b, D):
+def snapshot(h, t, xr, b, D):
     plt.fill_between(xr, b(xr), color = [0.5, 0.5, 0.5])
     for j, hl in enumerate(h):
         plt.plot(hl[:, t] + b(xr))
