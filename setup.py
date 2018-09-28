@@ -11,7 +11,7 @@ setuptools.setup(
     description="Shallow Water 1D for toy problem of robust estimation of bottom friction",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://gitlab.inria.fr/vtrapple/SWE_VT",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 2.7",
