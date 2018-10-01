@@ -6,7 +6,6 @@
 # ------------------------------------------------------------------------------
 
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -48,7 +47,8 @@ Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
 # Indices à observer
 idx_to_observe = np.arange(49, 200, 50, dtype = int)
 
-
+#
+#
 
 
 # -- Définition des fonctions coûts -------------------------------------------
@@ -355,7 +355,6 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
         fun_to_evaluate = J_KAP
     else:
         fun_to_evaluate = J_KAP_nograd
-
     KAP = np.asarray(join_K_variables(np.atleast_2d(KAP)))
     npoints = KAP.shape[0]
     trigger = True  # True for unparallelized
@@ -366,17 +365,24 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
         if npoints < 10:
             print 'Not enough points to compute, switch to unparallelized proc'
             trigger = True
+
+
     if trigger:  # Unparallelized computations
         response = np.empty(npoints)
-        gradient = np.empty(npoints)
         start = time.time()
+        if isinstance(KAP[0, 0], float):
+            gradient = np.empty([npoints, 1])
+        else:
+            gradient = np.empty([npoints, len(KAP[0, 0])])
+
         for i, points in enumerate(KAP):
             if isinstance(points[0], float):
                 arg_K = [points[0]]
             else:
                 arg_K = points[0]
+
             if adj_gradient:
-                response[i], gradient[i] = fun_to_evaluate(
+                response[i], gradient[i, :] = fun_to_evaluate(
                     np.asarray(arg_K), points[1], points[2],
                     hreference = hreference, idx_to_observe = idx_to_observe)
             else:
@@ -384,7 +390,9 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
                     np.asarray(arg_K), points[1], points[2],
                     hreference = hreference, idx_to_observe = idx_to_observe)
             print 'Time elapsed for unparallelized computations', time.time() - start
-    else:  # Parellelized computations
+
+
+    else:  # Parallelized computations
         pool = Pool(processes = ncores)
         split = np.array_split(KAP, ncores, 0)
         start = time.time()
@@ -407,11 +415,17 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
         response = np.asarray([item for sublist in response
                                for item in sublist])
         if adj_gradient:
+            print gradient
             gradient = np.asarray([item for sublist in gradient
                                    for item in sublist])
         pool.close()
         pool.join()
-    return response
+
+
+    if adj_gradient:
+        return response, gradient
+    else:
+        return response
 
 
 # ------------------------------------------------------------------------------
@@ -429,12 +443,13 @@ def inv_transformation_variable_to_unit(Y, bounds):
     X = Y * (bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
     return X
 
-
-
+#
+#
+#
+#
 
 
 # -- On direct run of the script ------------------------------------------------
-
 if __name__ == '__main__':
     [xr, href2, uref2, t] = swe_KAP(Kref * 2, 5.02, 15.0)
     animate_SWE(xr, [href, href2], b, D, ylim = [0, 30])
