@@ -12,7 +12,9 @@ Clone the project and hope for the best
 ```
 import haute_resolution.wrapper_HR as swe
 import code_swe.animation_SWE
+
 [xr, h, u, t] = swe.swe_KAP(swe.Kref * 2, swe.amplitude - 1.0, swe.period + 1.0)
+
 code_swe.animation_SWE.animate_SWE(xr, [swe.href, h], swe.b, swe.D, ylim = [0,10])
 ```
 
@@ -22,10 +24,12 @@ code_swe.animation_SWE.animate_SWE(xr, [swe.href, h], swe.b, swe.D, ylim = [0,10
 import haute_resolution.wrapper_HR as swe
 swe.J_KAP(swe.Kref, swe.amplitude, swe.period)
 
-epsilon = 1e-8
 cost0, gradient0 = swe.J_KAP([0], swe.amplitude, swe.period)
-cost_eps, gradient_eps = swe.J_KAP([epsilon], swe.amplitude, swe.period)
+
+epsilon = 1e-8
+cost_eps = swe.J_KAP_nograd([epsilon], swe.amplitude, swe.period)
 gradient_finite_diff = (cost_eps - cost0) / epsilon
+
 print gradient_finite_diff, gradient0
 ```
 
