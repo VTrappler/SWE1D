@@ -33,7 +33,32 @@ gradient_finite_diff = (cost_eps - cost0) / epsilon
 print gradient_finite_diff, gradient0
 ```
 
+### Evaluation of the cost function parallelized with gradient
+`J_KAP_array` readily implemented, taking advantage of the Multiprocessing module of python in order to parallelize the computations. The function takes as input an array of tuples, each one in the following format: `(Coeff_K, Amplitude, Period)`, where `Coeff_K` is an array that will produce the -piecewise constant) interpolation on all the grid points, and `Amplitude` and `Period` are scalar that parametrize the left boundary condition.
+```
+import haute_resolution.wrapper_HR as swe
+response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),
+                                      ([0.1, 0.2, 0.5], 5.1, 15.1),
+                                      ([0.1, 0.1, 0.1], 5.0, 15.2),
+                                      ([0.1, 0.1, 0.4], 5.1, 15.0),
+                                      ([0.2, 0.2, 0.5], 5.0, 15.1),
+                                      ([0.2, 0.2, 0.5], 5.1, 15.2),
+                                      ([0.6, 0.1, 0.7], 5.0, 15.0),
+                                      ([0.2, 0.2, 0.5], 5.1, 15.1),
+                                      ([0.2, 0.2, 0.5], 5.0, 15.2),
+                                      ([0.1, 0.7, 0.5], 5.1, 15.0),
+                                      ([0.2, 0.2, 0.2], 5.0, 15.1)],
+                                      idx_to_observe = None,
+                                      hreference = swe.href,
+                                      parallel=True, ncores=4,
+                                      adj_gradient=True)
+```
+
 ## Technical details
 ### Numerical scheme
 Numerical solution computed via finite volume.
 Adjoint code has been derived for reflexive boundary on the right, and Lax-Friedrich's flux inbetween the volumes.
+
+### Boundary condition on the left
+The boundary condition on the left is parametrized as following:
+`$$h(0,t) = \texttt{mean.h} + \texttt{amplitude} * \sin(t \dfrac{2\pi}{period} + \texttt{phase}) `$$

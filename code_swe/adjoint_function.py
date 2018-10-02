@@ -1,19 +1,23 @@
+#!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+# ------------------------------------------------------------------------------
+#           Definition of variables in the adjoint code for different fluxes
+# ------------------------------------------------------------------------------
+
 import numpy as np
-import pylab
 
 g = 9.81
 DF = lambda h,u : np.fabs(u) + np.sqrt(g*h)
 
-def lambdavec(hL,uL,hR,uR):
-    lambL = DF(hL,uL)
-    lambR = DF(hR,uR)
-    return [lambL,lambR]
+def lambdavec(hL, uL, hR, uR):
+    lambL = DF(hL, uL)
+    lambR = DF(hR, uR)
+    return [lambL, lambR]
 
-def lambdfun(hL,uL,hR,uR):
-    temp = lambdavec(hL,uL,hR,uR)
-    return [np.amax(temp,0)] + [np.argmax(temp,0)]
+def lambdfun(hL, uL, hR, uR):
+    temp = lambdavec(hL, uL, hR, uR)
+    return [np.amax(temp, 0)] + [np.argmax(temp, 0)]
 
 # np.argmax([lambL,lambR],0) # --> 1 si lambda_L>lambda_R, 1 sinon
 
@@ -33,9 +37,10 @@ def lambdfun(hL,uL,hR,uR):
 # calcul flux Rus (FhL,FhR,Fhul,FhuR,lambda,h,hu)
 # update
 
-################################
-# Variables Primitives Rusanov #
-################################
+
+# ------------------------------------------------------------------------------
+#                    Variables Primitives Rusanov 
+# ------------------------------------------------------------------------------
 
 def subA(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1]) # LgR = 1 if lambda_{i-1} > lambda_{i}
@@ -43,6 +48,7 @@ def subA(h,u,g,dt,dx):
                - LgR*(0.5*np.sqrt(g/h[:-2])*(h[:-2] - h[1:-1])))
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagA(h,u,g,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
@@ -51,6 +57,7 @@ def diagA(h,u,g,dt,dx):
            + lambda_p1 + LgRp1*(0.5*np.sqrt(g/h[1:-1])*(h[1:-1] - h[2:])) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
     return diag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def supA(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR) # RgL = 1 if lambda_{i+1} > lambda_i
@@ -59,12 +66,14 @@ def supA(h,u,g,dt,dx):
     return supDiag*(-dt/(2*dx))
 
 
+# ------------------------------------------------------------------------------
 def subB(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = h[:-2] \
               - LgR*(np.sign(u[:-2])*(h[:-2] - h[1:-1])) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagB(h,u,g,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
@@ -73,6 +82,7 @@ def diagB(h,u,g,dt,dx):
            + LgRp1*(np.sign(u[1:-1]))*(h[1:-1] - h[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
     return diag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def supB(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -80,12 +90,14 @@ def supB(h,u,g,dt,dx):
               - (np.ones(np.shape(LgR))-  LgR)*(np.sign(u[2:]))*(h[1:-1] - h[2:]) # RgL = 1 if lambda_{i+1} > lambda_i
     return supDiag*(-dt/(2*dx))    
 
+# ------------------------------------------------------------------------------
 def subC(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = u[:-2]**2 - g*h[:-2] \
               - LgR*(0.5*np.sqrt(g/h[:-2])*(u[:-2] - u[1:-1])) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagC(h,u,g,k,eta,DZ,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
@@ -95,6 +107,7 @@ def diagC(h,u,g,k,eta,DZ,dt,dx):
            - 2*dx*k*(eta+2)*u[1:-1]*np.fabs(u[1:-1])*h[1:-1]**(-eta-3)
     return diag #  
 
+# ------------------------------------------------------------------------------
 def supC(h,u,g):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -102,12 +115,14 @@ def supC(h,u,g):
               - RgL*(0.5*np.sqrt(g/h[2:])*(u[1:-1] - u[2:])) # RgL = 1 if lambda_{i+1} > lambda_i
     return supDiag
 
+# ------------------------------------------------------------------------------
 def subD(h,u,g):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = 2*u[:-2]*h[:-2] \
               - lambda_array - LgR*(np.sign(u[:-2]))*(u[:-2] - u[1:-1]) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag    
 
+# ------------------------------------------------------------------------------
 def diagD(h,u,g,k,eta,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:]) #  LgRp1 = 1 if lambda_{i} > lambda_{i+1}
@@ -118,6 +133,7 @@ def diagD(h,u,g,k,eta,dx):
            - 2*dx*np.sign(u[1:-1])*u[1:-1]*h[1:-1]**(-eta-2)
     return diag
 
+# ------------------------------------------------------------------------------
 def supD(h,u,g):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -125,9 +141,10 @@ def supD(h,u,g):
               - RgL*(np.sign(u[2:]))*(u[1:-1] - u[2:]) # RgL = 1 if lambda_{i+1} > lambda_i
     return supDiag
 
-###################################
-# Variables conservatives Rusanov #
-###################################
+
+# ------------------------------------------------------------------------------
+#                    Variables Conservatives Rusanov 
+# ------------------------------------------------------------------------------
 
 def subAcons(h,q,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1]) # LgR = 1 if lambda_{i-1} > lambda_{i}
@@ -135,6 +152,7 @@ def subAcons(h,q,g,dt,dx):
                - LgR*(0.5*np.sqrt(g/h[:-2]) - np.sign(q[:-2])/h[:-2]**2)*(h[:-2] - h[1:-1])
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagAcons(h,q,g,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
@@ -145,6 +163,7 @@ def diagAcons(h,q,g,dt,dx):
            + LgRp1*(0.5*np.sqrt(g/h[1:-1]) - np.sign(q[1:-1])/h[1:-1]**2)*(h[1:-1] - h[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
     return diag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def supAcons(h,q,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR) # RgL = 1 if lambda_{i+1} > lambda_i
@@ -153,12 +172,14 @@ def supAcons(h,q,g,dt,dx):
     return supDiag*(-dt/(2*dx))
 
 
+# ------------------------------------------------------------------------------
 def subBcons(h,q,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = 1 \
               - LgR*(np.sign(q[:-2])/h[:-2])*(h[:-2] - h[1:-1]) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagB(h,u,g,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
@@ -167,6 +188,7 @@ def diagB(h,u,g,dt,dx):
            + LgRp1*(np.sign(q[1:-1])/h[1:-1])*(h[1:-1] - h[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
     return diag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def supB(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -174,12 +196,14 @@ def supB(h,u,g,dt,dx):
               - (np.ones(np.shape(LgR))-  LgR)*(np.sign(u[2:]))*(h[1:-1] - h[2:]) # RgL = 1 if lambda_{i+1} > lambda_i
     return supDiag*(-dt/(2*dx))    
 
+# ------------------------------------------------------------------------------
 def subC(h,u,g,dt,dx):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = u[:-2]**2 - g*h[:-2] \
               - LgR*(0.5*np.sqrt(g/h[:-2])*(u[:-2] - u[1:-1])) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag*(-dt/(2*dx))
 
+# ------------------------------------------------------------------------------
 def diagC(h,u,g,k,eta,DZ,dt,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
@@ -189,6 +213,7 @@ def diagC(h,u,g,k,eta,DZ,dt,dx):
            - 2*dx*k*(eta+2)*u[1:-1]*np.fabs(u[1:-1])*h[1:-1]**(-eta-3)
     return diag #  
 
+# ------------------------------------------------------------------------------
 def supC(h,u,g):
     [lambda_array,LgR] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -196,12 +221,14 @@ def supC(h,u,g):
               - RgL*(0.5*np.sqrt(g/h[2:])*(u[1:-1] - u[2:])) # RgL = 1 if lambda_{i+1} > lambda_i
     return supDiag
 
+# ------------------------------------------------------------------------------
 def subD(h,u,g):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     subDiag = 2*u[:-2]*h[:-2] \
               - lambda_array - LgR*(np.sign(u[:-2]))*(u[:-2] - u[1:-1]) # LgR = 1 if lambda_{i-1} > lambda_{i}
     return subDiag    
 
+# ------------------------------------------------------------------------------
 def diagD(h,u,g,k,eta,dx):
     [lambda_m1,LgRm1] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     [lambda_p1,LgRp1] = lambdfun(h[1:-1],u[1:-1],h[2:],u[2:]) # LgRp1 = 1 if lambda_{i} > lambda_{i+1}
@@ -212,6 +239,7 @@ def diagD(h,u,g,k,eta,dx):
            - 2*dx*np.sign(u[1:-1])*u[1:-1]*h[1:-1]**(-eta-2)
     return diag
 
+# ------------------------------------------------------------------------------
 def supD(h,u,g):
     [lambda_array,LgR] = lambdfun(h[:-2],u[:-2],h[1:-1],u[1:-1])
     RgL = (np.ones(np.shape(LgR))-  LgR)    
@@ -220,18 +248,18 @@ def supD(h,u,g):
     return supDiag
             
 
-##########################################
-# Variables Conservatives Lax-Friedrichs #
-##########################################
+# ------------------------------------------------------------------------------
+#             Variables Conservatives Lax-Friedrichs 
+# ------------------------------------------------------------------------------
 
-def ALFcons(h,q,g,dt,dx,k):
+def ALFcons(h, q, g, dt, dx, k):
     """Construit la diagonale, la diag sup et la diag inf de A"""
-    lam = dx/dt
-    sub =  - lam*np.ones(q[:-1].shape)
-    diag = 2*lam*np.ones(q[:-2].shape)
-    diag = np.insert(diag,0,[lam]) # ajout pour BC
-    diag = np.append(diag,[lam])
-    sup = - lam*np.ones(q[:-1].shape) #q[:-2] ss BC 
+    lam = dx / dt
+    sub =  - lam * np.ones(q[:-1].shape)
+    diag = 2 * lam * np.ones(q[:-2].shape)
+    diag = np.insert(diag, 0, [lam]) # ajout pour BC
+    diag = np.append(diag, [lam])
+    sup = - lam * np.ones(q[:-1].shape) #q[:-2] ss BC 
     return [sub] + [diag] + [sup] 
 
 def BLFcons(h,q,g,dt,dx,k):

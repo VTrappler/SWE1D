@@ -397,12 +397,12 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
         split = np.array_split(KAP, ncores, 0)
         start = time.time()
         if adj_gradient:
-            response, gradient = pool.map(partial(J_KAP_array,
-                                                  hreference = hreference,
-                                                  idx_to_observe = idx_to_observe,
-                                                  parallel=False,
-                                                  adj_gradient=adj_gradient),
-                                          split)
+            response, gradient = zip(*pool.map(partial(J_KAP_array,
+                                                       hreference = hreference,
+                                                       idx_to_observe = idx_to_observe,
+                                                       parallel=False,
+                                                       adj_gradient=adj_gradient),
+                                               split))
         else:
             response = pool.map(partial(J_KAP_array,
                                         hreference = hreference,
@@ -415,7 +415,6 @@ def J_KAP_array(KAP, idx_to_observe = idx_to_observe, hreference = href,
         response = np.asarray([item for sublist in response
                                for item in sublist])
         if adj_gradient:
-            print gradient
             gradient = np.asarray([item for sublist in gradient
                                    for item in sublist])
         pool.close()

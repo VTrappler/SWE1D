@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
 import numpy as np
-import pylab
 
 from LaxFriedrichs import LF_flux
 from compute_flux_1d import compute_flux_1d, compute_flux_1d_bis
@@ -187,8 +187,10 @@ def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_
     return [xr] + [h_array] + [q_array] + [t_array]
 
 
+# ------------------------------------------------------------------------------
+#                            Linear Tangent Model
+# ------------------------------------------------------------------------------
 
-####### Modele lineaire tangent ################
 # ------------------------------------------------------------------------------
 def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
                                    dK0, h, u, href,
@@ -259,8 +261,10 @@ def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
     return [h_d] + [q_d] + [dj]
 
 
+# ------------------------------------------------------------------------------
+#                              Adjoint model
+# ------------------------------------------------------------------------------
 
-############# Adjoint ##############
 # ------------------------------------------------------------------------------
 def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
                           h_array, u_array, ecartObs,
