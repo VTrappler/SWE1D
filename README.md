@@ -61,4 +61,6 @@ Adjoint code has been derived for reflexive boundary on the right, and Lax-Fried
 
 ### Boundary condition on the left
 The boundary condition on the left is parametrized as following:
-$$h(0,t) = \texttt{mean.h} + \texttt{amplitude} * \sin(t \dfrac{2\pi}{period} + \texttt{phase})$$
+```math
+h(0,t) = \texttt{mean.h} + \texttt{amplitude} \cdot \sin\left(t \frac{2\pi}{\texttt{period}} + \texttt{phase}\right)
+```
