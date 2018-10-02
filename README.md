@@ -2,6 +2,7 @@
 
 Numerical code modelling the 1D shallow water equations to build a toy problem of robust estimation of the bottom friction. Quadratic cost function is implemented between a reference simulation (twin experiments setting) and the simulation performed with given parameters. The gradient with respect to the bottom friction of this cost function is obtained via the adjoint model. In the directory haute_resolution, `wrapper_HR.py` contains readily available cost function(s)
 
+Main project: vtrapple/These>
 
 
 ## Installation
@@ -64,3 +65,6 @@ The boundary condition on the left is parametrized as following:
 ```math
 h(0,t) = \texttt{mean.h} + \texttt{amplitude} \cdot \sin\left(t \frac{2\pi}{\texttt{period}} + \texttt{phase}\right)
 ```
+
+
+## 
