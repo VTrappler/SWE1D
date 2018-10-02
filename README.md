@@ -37,7 +37,7 @@ print gradient_finite_diff, gradient0
 `J_KAP_array` readily implemented, taking advantage of the Multiprocessing module of python in order to parallelize the computations. The function takes as input an array of tuples, each one in the following format: `(Coeff_K, Amplitude, Period)`, where `Coeff_K` is an array that will produce the -piecewise constant) interpolation on all the grid points, and `Amplitude` and `Period` are scalar that parametrize the left boundary condition.
 ```
 import haute_resolution.wrapper_HR as swe
-response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),
+response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),   # Example array to evaluate, where dim K = 3
                                       ([0.1, 0.2, 0.5], 5.1, 15.1),
                                       ([0.1, 0.1, 0.1], 5.0, 15.2),
                                       ([0.1, 0.1, 0.4], 5.1, 15.0),
