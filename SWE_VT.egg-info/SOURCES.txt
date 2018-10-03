@@ -1,5 +1,7 @@
 README.md
 setup.py
+HR_config/__init__.py
+HR_config/wrapper.py
 SWE_VT.egg-info/PKG-INFO
 SWE_VT.egg-info/SOURCES.txt
 SWE_VT.egg-info/dependency_links.txt
@@ -15,5 +17,3 @@ code_swe/direct_MLT_ADJ_LF.py
 code_swe/interpolation_tools.py
 code_swe/rusanov.py
 code_swe/variables.py
-haute_resolution/__init__.py
-haute_resolution/wrapper_HR.py

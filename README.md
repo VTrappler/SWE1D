@@ -6,8 +6,10 @@ Main project: vtrapple/These>
 
 
 ## Installation
-In the repository where you downloaded and extracted the folder SWE_VT
+This project is not (yet?) on the python package index (PyPI), hence has to be cloned from this gitlab repository (root access may be needed to install):
 ```
+git clone git@gitlab.inria.fr:vtrapple/SWE_VT.git
+cd SWE_VT
 python setup.py install
 ```
 

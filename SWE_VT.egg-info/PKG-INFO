@@ -8,17 +8,21 @@ Author-email: victor.trappler@univ-grenoble-alpes.fr
 License: UNKNOWN
 Description: # SWE_VT
         
-        Numerical code modelling the 1D shallow water equations to build a toy problem of robust estimation of the bottom friction. Quadratic cost function is implemented between a reference simulation (twin experiments setting) and the simulation performed with given parameters. The gradient with respect to the bottom friction of this cost function is obtained via the adjoint model. In the directory haute_resolution, `wrapper_HR.py` contains readily available cost function(s)
+        Numerical code modelling the 1D shallow water equations to build a toy problem of robust estimation of the bottom friction. Quadratic cost function is implemented between a reference simulation (twin experiments setting) and the simulation performed with given parameters. The gradient with respect to the bottom friction of this cost function is obtained via the adjoint model. In the module `\HR_config\`, `wrapper.py` contains readily available cost function(s)
         
+        Main project: vtrapple/These>
         
         
         ## Installation
-        Clone the project and hope for the best
+        In the repository where you downloaded and extracted the folder SWE_VT
+        ```
+        python setup.py install
+        ```
         
         ## Usage
         ### Animation of the evolution of the sea surface heights
         ```
-        import haute_resolution.wrapper_HR as swe
+        import HR_config.wrapper as swe
         import code_swe.animation_SWE
         
         [xr, h, u, t] = swe.swe_KAP(swe.Kref * 2, swe.amplitude - 1.0, swe.period + 1.0)
@@ -29,7 +33,6 @@ Description: # SWE_VT
         ### Evaluation of the cost function (where `swe.href` is the simulation reference), and verification of the gradient
         
         ```
-        import haute_resolution.wrapper_HR as swe
         swe.J_KAP(swe.Kref, swe.amplitude, swe.period)
         
         cost0, gradient0 = swe.J_KAP([0], swe.amplitude, swe.period)
@@ -44,9 +47,8 @@ Description: # SWE_VT
         ### Evaluation of the cost function parallelized with gradient
         `J_KAP_array` readily implemented, taking advantage of the Multiprocessing module of python in order to parallelize the computations. The function takes as input an array of tuples, each one in the following format: `(Coeff_K, Amplitude, Period)`, where `Coeff_K` is an array that will produce the -piecewise constant) interpolation on all the grid points, and `Amplitude` and `Period` are scalar that parametrize the left boundary condition.
         ```
-        import haute_resolution.wrapper_HR as swe
-        response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),
-                                              ([0.1, 0.2, 0.5], 5.1, 15.1),
+        response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),   # Example array to evaluate
+                                              ([0.1, 0.2, 0.5], 5.1, 15.1),   # Dim K = 3
                                               ([0.1, 0.1, 0.1], 5.0, 15.2),
                                               ([0.1, 0.1, 0.4], 5.1, 15.0),
                                               ([0.2, 0.2, 0.5], 5.0, 15.1),
@@ -72,6 +74,9 @@ Description: # SWE_VT
         ```math
         h(0,t) = \texttt{mean.h} + \texttt{amplitude} \cdot \sin\left(t \frac{2\pi}{\texttt{period}} + \texttt{phase}\right)
         ```
+        
+        
+        ## 
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 2.7

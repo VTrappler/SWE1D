@@ -1,2 +1,2 @@
+HR_config
 code_swe
-haute_resolution
