@@ -20,7 +20,9 @@ Description: # SWE_VT
         ```
         import haute_resolution.wrapper_HR as swe
         import code_swe.animation_SWE
+        
         [xr, h, u, t] = swe.swe_KAP(swe.Kref * 2, swe.amplitude - 1.0, swe.period + 1.0)
+        
         code_swe.animation_SWE.animate_SWE(xr, [swe.href, h], swe.b, swe.D, ylim = [0,10])
         ```
         
@@ -30,17 +32,46 @@ Description: # SWE_VT
         import haute_resolution.wrapper_HR as swe
         swe.J_KAP(swe.Kref, swe.amplitude, swe.period)
         
-        epsilon = 1e-8
         cost0, gradient0 = swe.J_KAP([0], swe.amplitude, swe.period)
-        cost_eps, gradient_eps = swe.J_KAP([epsilon], swe.amplitude, swe.period)
+        
+        epsilon = 1e-8
+        cost_eps = swe.J_KAP_nograd([epsilon], swe.amplitude, swe.period)
         gradient_finite_diff = (cost_eps - cost0) / epsilon
+        
         print gradient_finite_diff, gradient0
+        ```
+        
+        ### Evaluation of the cost function parallelized with gradient
+        `J_KAP_array` readily implemented, taking advantage of the Multiprocessing module of python in order to parallelize the computations. The function takes as input an array of tuples, each one in the following format: `(Coeff_K, Amplitude, Period)`, where `Coeff_K` is an array that will produce the -piecewise constant) interpolation on all the grid points, and `Amplitude` and `Period` are scalar that parametrize the left boundary condition.
+        ```
+        import haute_resolution.wrapper_HR as swe
+        response, gradient = swe.J_KAP_array([([0.1, 0.2, 0.5], 5.0, 15.0),
+                                              ([0.1, 0.2, 0.5], 5.1, 15.1),
+                                              ([0.1, 0.1, 0.1], 5.0, 15.2),
+                                              ([0.1, 0.1, 0.4], 5.1, 15.0),
+                                              ([0.2, 0.2, 0.5], 5.0, 15.1),
+                                              ([0.2, 0.2, 0.5], 5.1, 15.2),
+                                              ([0.6, 0.1, 0.7], 5.0, 15.0),
+                                              ([0.2, 0.2, 0.5], 5.1, 15.1),
+                                              ([0.2, 0.2, 0.5], 5.0, 15.2),
+                                              ([0.1, 0.7, 0.5], 5.1, 15.0),
+                                              ([0.2, 0.2, 0.2], 5.0, 15.1)],
+                                              idx_to_observe = None,
+                                              hreference = swe.href,
+                                              parallel=True, ncores=4,
+                                              adj_gradient=True)
         ```
         
         ## Technical details
         ### Numerical scheme
         Numerical solution computed via finite volume.
         Adjoint code has been derived for reflexive boundary on the right, and Lax-Friedrich's flux inbetween the volumes.
+        
+        ### Boundary condition on the left
+        The boundary condition on the left is parametrized as following:
+        ```math
+        h(0,t) = \texttt{mean.h} + \texttt{amplitude} \cdot \sin\left(t \frac{2\pi}{\texttt{period}} + \texttt{phase}\right)
+        ```
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 2.7

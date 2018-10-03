@@ -5,7 +5,10 @@ Numerical code modelling the 1D shallow water equations to build a toy problem o
 
 
 ## Installation
-Clone the project and hope for the best
+In the repository where you downloaded and extracted the folder SWE_VT
+```
+python setup.py install
+```
 
 ## Usage
 ### Animation of the evolution of the sea surface heights
