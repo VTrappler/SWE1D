@@ -15,24 +15,22 @@ python setup.py install
 
 ## Usage
 ### Animation of the evolution of the sea surface heights
-```
-import HR_config.wrapper as swe
-import code_swe.animation_SWE
-
-[xr, h, u, t] = swe.swe_KAP(swe.Kref * 2, swe.amplitude - 1.0, swe.period + 1.0)
-
-code_swe.animation_SWE.animate_SWE(xr, [swe.href, h], swe.b, swe.D, ylim = [0,10])
+```python
+>>> import HR_config.wrapper as swe
+>>> import code_swe.animation_SWE
+>>> [xr, h, u, t] = swe.swe_KAP(swe.Kref * 2, swe.amplitude - 1.0, swe.period + 1.0)
+>>> code_swe.animation_SWE.animate_SWE(xr, [swe.href, h], swe.b, swe.D, ylim = [0,10])
 ```
 
 ### Evaluation of the cost function (where `swe.href` is the simulation reference), and verification of the gradient
 
-``` python
->>>swe.J_KAP(swe.Kref, swe.amplitude, swe.period)
->>>cost0, gradient0 = swe.J_KAP([0], swe.amplitude, swe.period)
->>>epsilon = 1e-8
->>>cost_eps = swe.J_KAP_nograd([epsilon], swe.amplitude, swe.period)
->>>gradient_finite_diff = (cost_eps - cost0) / epsilon
->>>print gradient_finite_diff, gradient0
+```python
+>>> swe.J_KAP(swe.Kref, swe.amplitude, swe.period)
+>>> cost0, gradient0 = swe.J_KAP([0], swe.amplitude, swe.period)
+>>> epsilon = 1e-8
+>>> cost_eps = swe.J_KAP_nograd([epsilon], swe.amplitude, swe.period)
+>>> gradient_finite_diff = (cost_eps - cost0) / epsilon
+>>> print gradient_finite_diff, gradient0
 ```
 
 ### Evaluation of the cost function parallelized with gradient
