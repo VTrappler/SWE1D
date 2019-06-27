@@ -86,15 +86,11 @@ def J_function_observation_init(h_test, ind_to_observe=None):
 # def J_function_regul(h1, h2, alpha, K1, Kb):
 #     return 0.5*np.sum((h1-h2)**2) + 0.5*alpha*(K1-Kb)**2
 
-
-def Froude(h, u):                # Nombre de Froude
-    return np.fabs(u) / np.sqrt(g * h)
-
-
 # Ap_Pm -> A = 5.1; P = 49.8
 # Ap_Pp -> A = 5.2; P = 50.1
 # Am_Pp -> A = 4.9; P = 50.2
 # Am_Pm -> A = 4.8; P = 49.9
+
 print 'Computation of href performed w/ following parameters:'
 print '- Hauteur eau moyenne = ', mean_h
 print '- Amplitude = ', amplitude
