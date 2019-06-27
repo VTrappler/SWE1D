@@ -29,7 +29,7 @@ xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
 eta = 7. / 3.
 
 # Conditions initiales
-u0 = lambda x: 0
+u0 = lambda x: 0 * x
 h0 = lambda x: np.where(x > np.mean(D), 20, 20)
 
 # Bathymétrie
@@ -452,11 +452,7 @@ def inv_transformation_variable_to_unit(Y, bounds):
 if __name__ == '__main__':
     [xr, href2, uref2, t] = swe_KAP(Kref * 2, 5.02, 15.0)
     animate_SWE(xr, [href, href2], b, D, ylim = [0, 30])
-
-
-
-
-
+    
 
 
 

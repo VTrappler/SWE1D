@@ -20,10 +20,10 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
         R = min(i, N - 2)
         # DF = |u| + (g*h)**0.5
 
-        lmaxvec[i] = max(u[L] + np.sqrt(np.max(h[L], 0) * g), u[R] +
-                         np.sqrt(np.max(h[R], 0) * g))
-        lminvec[i] = min(u[L] - np.sqrt(np.max(h[L], 0) * g), u[R] +
-                         np.sqrt(np.max(h[R], 0) * g))
+        lmaxvec[i] = max(u[L] + np.sqrt(np.max(h[L], 0) * g),
+                         u[R] + np.sqrt(np.max(h[R], 0) * g))
+        lminvec[i] = min(u[L] - np.sqrt(np.max(h[L], 0) * g),
+                         u[R] + np.sqrt(np.max(h[R], 0) * g))
         # F fonction de flux (de l'equation initiale)
         [FhL, FhuL] = F(h[L], u[L], g)
         [FhR, FhuR] = F(h[R], u[R], g)

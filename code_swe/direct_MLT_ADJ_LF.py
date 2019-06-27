@@ -9,6 +9,8 @@ from variables import ConservedVars, PrimitiveVars
 from adjoint_function import ALFcons, BLFcons, CLFcons, DLFcons
 
 g = 9.81
+import matplotlib.pyplot as plt
+
 
 
 # ------------------------------------------------------------------------------
@@ -30,12 +32,12 @@ def F(h, u, g):
 def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
                   Kvec, boundary_L, boundary_R, verbose = False):
     # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
-    dx = np.fabs(np.diff(D))/N
+    dx = np.fabs(np.diff(D)) / N
     xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0 , N)
     x = np.linspace(D[0], D[1], N + 1)
-    h = h0(xr)
-    u = u0(xr)
-    Nt =int(T / dt + 1)
+    h = h0(xr).squeeze()
+    u = u0(xr).squeeze()
+    Nt = int(T / dt + 1)
     h_array = np.zeros([xr.shape[0], Nt])
     u_array = np.zeros([xr.shape[0] ,Nt])
     t_array = np.zeros(Nt)
@@ -49,7 +51,7 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
     
     # Modification de la hauteur d'eau, si il y a une bathy non constante
     if b is not None:
-        h = h - b(xr)
+        h = h - b(xr).squeeze()
         
     # Passage en var conservatives
     [h, hu] = ConservedVars(h, u)
@@ -74,7 +76,8 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
     while t < T:
 
         # Calcul du flux numerique, et valeur propre max
-        [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux,dt,dx)
+        # [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx)
+        [Fh,Fhu, lmax,lmin] = compute_flux_1d(h, hu, F, DF, g, LF_flux, dt, dx)
         
         # Adaptation du pas de temps, avec condition CFL
         # dt = min (T-t, CFL * dx/lmax)
@@ -86,15 +89,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         fric_quad = - K*hu*np.fabs(hu)*(h**(-eta))
         # maj des variables d'etat conservatives
 
-        h   = h  - dt/dx * np.diff(Fh)
-        hu  = hu - dt/dx * np.diff(Fhu)
+        h   -= dt/dx * np.diff(Fh)
+        hu  -= dt/dx * np.diff(Fhu)
         if b is not None:
             # dd = g*(h[2:]**2 - h[:-2]**2)/(2.*dx)
             # dd = np.insert(dd,0,[0])
             # S = np.append(dd,0)
-            hu = hu + dt*S
-        hu = hu + dt*fric_quad
-        t = t+dt
+            hu += dt * S
+        hu += dt * fric_quad
+        t += dt
         
         # Conditions aux limites
         [h, hu] = boundary_L(h, hu, t)

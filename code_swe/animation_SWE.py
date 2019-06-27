@@ -4,14 +4,13 @@
 # ANIMATION MODULE FOR SWE CODE -------------------------------------------
 
 import numpy as np
-import pylab
 from matplotlib import animation
 import matplotlib.pyplot as plt
 
 
 # ------------------------------------------------------------------------------
 def def_lines(Nlines):
-    return [pylab.plot([], [])[0] for _ in range(Nlines)]
+    return [plt.plot([], [])[0] for _ in range(Nlines)]
 
 
 # ------------------------------------------------------------------------------
@@ -31,7 +30,7 @@ def animate_curve(i, lines, h, b, xr):
 # ------------------------------------------------------------------------------
 def animate_SWE(xr, h, b, D, ylim = [0, 10]):
     """
-    Create an animation of the temporal evolution of the sea surface height 
+    Create an animation of the temporal evolution of the sea surface height
 
     Parameters
     ----------
@@ -50,25 +49,25 @@ def animate_SWE(xr, h, b, D, ylim = [0, 10]):
     Nlines = np.shape(h)[0]
     if b is None:
         b = lambda x: 0
-    fig = pylab.figure()
+    fig = plt.figure()
     lines = def_lines(Nlines)
-    pylab.xlim(D[0], D[1])
-    pylab.ylim(ylim[0], ylim[1])
+    plt.xlim(D[0], D[1])
+    plt.ylim(ylim[0], ylim[1])
     animate = lambda i: animate_curve(i, lines, h, b, xr)
     init = lambda: init_lines(lines)
     ani = animation.FuncAnimation(fig, animate, init_func=init,
                                   frames=h[0].shape[1], blit=True,
                                   interval=1, repeat=False)
-    pylab.fill_between(xr, b(xr), color = [0.5, 0.5, 0.5])
-    pylab.xlabel('xr')
-    pylab.ylabel('h')
-    pylab.show()
+    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color = [0.5, 0.5, 0.5])
+    plt.xlabel('xr')
+    plt.ylabel('h')
+    plt.show()
     return ani
 
 
 # ------------------------------------------------------------------------------
 def snapshot(h, t, xr, b, D):
-    plt.fill_between(xr, b(xr), color = [0.5, 0.5, 0.5])
+    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color = [0.5, 0.5, 0.5])
     for j, hl in enumerate(h):
         plt.plot(hl[:, t] + b(xr))
     plt.show()
