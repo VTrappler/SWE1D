@@ -35,8 +35,18 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
     dx = np.fabs(np.diff(D)) / N
     xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0 , N)
     x = np.linspace(D[0], D[1], N + 1)
-    h = h0(xr).squeeze()
-    u = u0(xr).squeeze()
+    if callable(h0):
+        h = h0(xr).squeeze()
+    else:
+        # if h0.squeeze().shape[0] != xr.shape[0]:
+        #     pass # TODO: Add error
+        h = h0
+    if callable(u0):
+        u = u0(xr).squeeze()
+    else:
+        # if h0.squeeze().shape[0] != xr.shape[0]:
+        #     pass# TODO: Add error
+        u = u0
     Nt = int(T / dt + 1)
     h_array = np.zeros([xr.shape[0], Nt])
     u_array = np.zeros([xr.shape[0] ,Nt])
@@ -229,15 +239,15 @@ def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
     
     while i<Nt-1:
         
-        [subA,diagA,supA] = ALFcons(h[:,i],q[:,i],g,dt,dx,K)
-        [subB,diagB,supB] = BLFcons(h[:,i],q[:,i],g,dt,dx,K)
-        [subC,diagC,supC] = CLFcons(h[:,i],q[:,i],g,dt,dx,K,DZ)
-        [subD,diagD,supD] = DLFcons(h[:,i],q[:,i],g,dt,dx,K)
+        [subA, diagA, supA] = ALFcons(h[:, i], q[:, i], g, dt, dx, K)
+        [subB, diagB, supB] = BLFcons(h[:, i], q[:, i], g, dt, dx, K)
+        [subC, diagC, supC] = CLFcons(h[:, i], q[:, i], g, dt, dx, K, DZ)
+        [subD, diagD, supD] = DLFcons(h[:, i], q[:, i], g, dt, dx, K)
         
-        Amat = create_tridiag(subA,diagA,supA)
-        Bmat = create_tridiag(subB,diagB,supB)
-        Cmat = create_tridiag(subC,diagC,supC)
-        Dmat = create_tridiag(subD,diagD,supD)
+        Amat = create_tridiag(subA, diagA, supA)
+        Bmat = create_tridiag(subB, diagB, supB)
+        Cmat = create_tridiag(subC, diagC, supC)
+        Dmat = create_tridiag(subD, diagD, supD)
 
         h_d[:,i+1] = h_d[:,i] - (dt/(2.*dx))*( Amat.dot(h_d[:,i]) \
                                                + Bmat.dot(q_d[:,i]))
@@ -272,14 +282,14 @@ def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
 def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
                           h_array, u_array, ecartObs,
                           bcL_A, bcR_A, obs_mat = None):
-    dx = np.fabs(np.diff(D))/N
-    xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
-    Nt = int(1+T/dt)
+    dx = np.fabs(np.diff(D)) / N
+    xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0 , N)
+    Nt = int(1 + T / dt)
     h = h_array
     u = u_array
-    eta = 7./3.
-    lam = dx/dt
-    q = h*u
+    eta = 7. / 3.
+    lam = dx / dt
+    q = h * u
     if obs_mat is None:
         obs_mat = np.diag(np.ones(ecartObs.shape[0]))
 
@@ -288,13 +298,13 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
     else:
         K = Kvec
 
-    h_A = np.zeros([N,Nt])
-    u_A = np.zeros([N,Nt])
-    q_A = np.zeros([N,Nt])
+    h_A = np.zeros([N, Nt])
+    u_A = np.zeros([N, Nt])
+    q_A = np.zeros([N, Nt])
     
     if b is not None:
         B = b(xr)
-        DZ = (B[2:] - B[:-2]) / (2 * dx)
+        DZ = (B[2:] - B[:-2]) / (2.0 * dx)
         DZ0 = (B[1] - B[0]) / dx
         DZend = (B[-1] - B[-2]) / dx
         DZ = np.insert(DZ, 0, [DZ0])
@@ -302,30 +312,30 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
     else:
         DZ = np.zeros([xr.shape[0]])
     t = T
-    i = Nt-2
+    i = Nt - 2
     # print 'Debut resolution modele adjoint'
     while i>-1:
 
-        [subA,diagA,supA] = ALFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
-        [subB,diagB,supB] = BLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
-        [subC,diagC,supC] = CLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K,DZ)
-        [subD,diagD,supD] = DLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
+        [subA, diagA, supA] = ALFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K)
+        [subB, diagB, supB] = BLFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K)
+        [subC, diagC, supC] = CLFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K, DZ)
+        [subD, diagD, supD] = DLFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K)
 
-        Astar = create_tridiag(subA,diagA,supA).T
-        Bstar = create_tridiag(subB,diagB,supB).T
-        Cstar = create_tridiag(subC,diagC,supC).T
-        Dstar = create_tridiag(subD,diagD,supD).T
+        Astar = create_tridiag(subA, diagA, supA).T
+        Bstar = create_tridiag(subB, diagB, supB).T
+        Cstar = create_tridiag(subC, diagC, supC).T
+        Dstar = create_tridiag(subD, diagD, supD).T
 
-        [h_A[:,i+1],q_A[:,i+1]] = bcL_A(h_A[:,i+1],q_A[:,i+1],t)
-        [h_A[:,i+1],q_A[:,i+1]] = bcR_A(h_A[:,i+1],q_A[:,i+1],t)
+        [h_A[:, i + 1], q_A[:, i + 1]] = bcL_A(h_A[:, i + 1], q_A[:, i + 1], t)
+        [h_A[:, i + 1], q_A[:, i + 1]] = bcR_A(h_A[:, i + 1], q_A[:, i + 1], t)
         
-        h_A[:,i] = h_A[:,i+1] - (dt/(2.*dx))*(Astar.dot(h_A[:,i+1])\
+        h_A[:, i] = h_A[:,i+1] - (dt/(2.*dx))*(Astar.dot(h_A[:,i+1])\
                                                     + Cstar.dot(q_A[:,i+1]))\
             + dt*obs_mat.T.dot(obs_mat.dot(ecartObs[:,i+1])) \
             - dt*g*DZ*q_A[:,i+1]\
             + dt*K*(eta)*q[:,i+1]*np.fabs(q[:,i+1])*(h[:,i+1]**(-eta-1))*q_A[:,i+1]
 
-        q_A[:,i] = q_A[:,i+1] - (dt/(2.*dx))*(Bstar.dot(h_A[:,i+1])\
+        q_A[:, i] = q_A[:,i+1] - (dt/(2.*dx))*(Bstar.dot(h_A[:,i+1])\
                                                      + Dstar.dot(q_A[:,i+1]))\
             + dt*(-2*K*np.sign(q[:,i+1])*q[:,i+1]*h[:,i+1]**(-eta))*q_A[:,i+1]
 
@@ -334,7 +344,7 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
     # print 'Fin du modele adjoint'
     if isinstance(K,(list,np.ndarray)):
         # grad = np.sum(-(h[:,:-1]**(-eta)) * q[:,:-1] * np.fabs(q[:,:-1]) * q_A,1)
-        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta),1)
+        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta), 1)
  
     else:
         # grad = np.sum(-(h[:,:-1]**(-eta)) * q[:,:-1] * np.fabs(q[:,:-1]) * q_A)
@@ -346,7 +356,7 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
 # ------------------------------------------------------------------------------
 def shallow_water_RSS(D, g, T, h0, u0, N, num_flux, dt, b,
                       Kvec, bcL, bcR, href, cost_fun):
-    [xr,h_array,u_array,t] = shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
+    [xr, h_array, u_array, t] = shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
                                            Kvec, bcL, bcR)
     cost = cost_fun(h_array, href)
     print "J(K) = ", cost   
@@ -359,11 +369,11 @@ def shallow_water_RSS_grad(D, g, T, h0, u0, N,
                            bcL, bcR, bcL_A, bcR_A,
                            href, cost_fun):
     # Modèle direct
-    [xr,h_array,u_array,t] = shallow_water(D,g,T,h0,u0,N, num_flux, dt, b, Kvec,bcL, bcR)
+    [xr, h_array, u_array, t] = shallow_water(D, g, T, h0, u0, N, num_flux, dt, b, Kvec, bcL, bcR)
     ecartObs = h_array - href
     # Modèle adjoint
-    [h_A,q_A,grad] = adjoint_shallow_water(D,g,T,N, dt, b, Kvec,h_array,u_array, ecartObs, bcL_A, bcR_A)
-    cost = cost_fun(h_array,href)
+    [h_A, q_A, grad] = adjoint_shallow_water(D, g, T, N, dt, b, Kvec, h_array, u_array, ecartObs, bcL_A, bcR_A)
+    cost = cost_fun(h_array, href)
     print 'J(K) = ', cost
     print '||grad J||**2 =', np.sum(grad**2)
     return [cost] + [grad]
@@ -375,11 +385,12 @@ def shallow_water_RSS_grad_observation(D, g, T, h0, u0, N,
                                        bcL, bcR, bcL_A, bcR_A,
                                        href, cost_fun, obs_mat = None):
     # Modèle direct
-    [xr,h_array,u_array,t] = shallow_water(D,g,T,h0,u0,N, num_flux, dt, b, Kvec,bcL, bcR)
+    [xr, h_array, u_array, t] = shallow_water(D, g, T, h0, u0, N, num_flux, dt, b, Kvec, bcL, bcR)
     ecartObs = h_array - href
     # Modèle adjoint
-    [h_A,q_A,grad] = adjoint_shallow_water(D,g,T,N, dt, b, Kvec,h_array,u_array, ecartObs, bcL_A, bcR_A, obs_mat)
-    cost = cost_fun(h_array,href)
+    [h_A, q_A, grad] = adjoint_shallow_water(D, g, T, N, dt, b,
+                                             Kvec, h_array, u_array, ecartObs, bcL_A, bcR_A, obs_mat)
+    cost = cost_fun(h_array, href)
     print 'J(K) = ', cost
     print '||grad J||**2 =', np.sum(grad**2)
     return [cost] + [grad]
