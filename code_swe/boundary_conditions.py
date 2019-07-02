@@ -58,6 +58,24 @@ def BCrand(h, hu, t, side, mean_h, amplitude, period, phase):
     return [h] + [hu]
 
 
+# ------------------------------------------------------------------------------
+def BCsumsin(h, hu, t, side, mean_h, amplitude_vector, fundperiod, phase):
+    """ Conditions aux limites du modele direct, avec plus de paramètres"""
+    if side == 'L':
+        h[0] = mean_h
+        period = fundperiod
+        for amp in amplitude_vector:
+            h[0] += amp * np.sin((t * (2 * np.pi) / period) + phase)
+            period /= 2.0
+        hu[0] = 0.0
+    elif side == 'R':
+        h[-1] = h[-2]
+        hu[-1] = hu[-2] * 0.0
+    return [h] + [hu]
+
+
+
+
 bcL = lambda h, hu, t: BC(h, hu, t, 'L')
 bcR = lambda h, hu, t: BC(h, hu, t, 'R')
 bcL_d = lambda h, hu, t: BC_MLT(h, hu, 'L')

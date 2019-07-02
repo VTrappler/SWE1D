@@ -168,7 +168,7 @@ def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_
     while t < T:
 
         # Calcul du flux numerique, et valeur propre max
-        [Fh,Fhu, lmax,lmin] = compute_flux_1d(h, q, F, DF, g, num_flux,dt,dx)
+        [Fh, Fhu, lmax, lmin] = compute_flux_1d(h, q, F, DF, g, num_flux, dt, dx)
         # Adaptation du pas de temps, avec condition CFL
         # dt = min (T-t, CFL * dx/lmax)
 
