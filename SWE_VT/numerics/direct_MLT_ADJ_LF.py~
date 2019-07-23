@@ -9,7 +9,6 @@ from variables import ConservedVars, PrimitiveVars
 from adjoint_function import ALFcons, BLFcons, CLFcons, DLFcons
 
 g = 9.81
-import matplotlib.pyplot as plt
 
 
 

@@ -9,7 +9,6 @@ from variables import ConservedVars, PrimitiveVars
 from adjoint_function import ALFcons, BLFcons, CLFcons, DLFcons
 
 g = 9.81
-import matplotlib.pyplot as plt
 
 
 
@@ -391,8 +390,6 @@ def shallow_water_RSS_grad_observation(D, g, T, h0, u0, N,
     [h_A, q_A, grad] = adjoint_shallow_water(D, g, T, N, dt, b,
                                              Kvec, h_array, u_array, ecartObs, bcL_A, bcR_A, obs_mat)
     cost = cost_fun(h_array, href)
-    print 'J(K) = ', cost
-    print '||grad J||**2 =', np.sum(grad**2)
     return [cost] + [grad]
 
 ####### Modele lineaire tangent + REGULARISATION  ################
