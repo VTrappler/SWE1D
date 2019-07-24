@@ -3,9 +3,10 @@
 
 
 import numpy as np
-# import time
-# from multiprocessing import Pool, cpu_count
-# from functools import partial
+import time
+from multiprocessing import Pool, cpu_count
+from pathos.multiprocessing import ProcessingPool
+from functools import partial
 
 from SWE_VT.numerics.LaxFriedrichs import LF_flux
 import SWE_VT.numerics.direct_MLT_ADJ_LF as diradj
@@ -178,9 +179,103 @@ class CostSWE:
         return cost, grad_coeff
 
 
+    def J_KU(self, KU, parallel=False, ncores=None, adj_gradient=False, verbose=True):
+        if adj_gradient:
+            fun_to_evaluate = self.JG
+        else:
+            fun_to_evaluate = self.J
+
+        npoints = KU.shape[0]
+        trigger = True  # True for unparallelized
+        if parallel:
+            trigger = False
+            if ncores is None:
+                ncores = cpu_count()
+            if npoints < 10:
+                print('Not enough points to compute, switch to unparallelized proc')
+                trigger = True
+
+        start_fun = time.time()
+        if trigger:
+            response = np.empty(npoints)
+            if (adj_gradient and isinstance(KU[0, 0], float)):
+                gradient = np.empty([npoints, 1])
+            elif adj_gradient:
+                gradient = np.empty([npoints, len(KU[0, 0])])
+
+            for i, points in enumerate(KU):
+                start = time.time()
+                if isinstance(points[0], float):
+                    arg_K = [points[0]]
+                else:
+                    arg_K = points[0]
+
+                if adj_gradient:
+                    response[i], gradient[i, :] = fun_to_evaluate(
+                        np.asarray(arg_K), points[1:])
+                else:
+                    response[i] = fun_to_evaluate(
+                        np.asarray(arg_K), points[1:])
+                if verbose:
+                    print('Time elapsed for unparallelized computations: {}'.
+                          format(time.time() - start))
 
 
 
+        else:  # Parallelized computations
+            try:
+                pool = ProcessingPool(nodes = ncores)
+            except AssertionError:
+                pool.restart()
+            split = np.array_split(KU, ncores, 0)
+            start = time.time()
+            if adj_gradient:
+                try:
+                    response_i, gradient_i = zip(*pool.map(partial(self.J_KU,
+                                                                   parallel=False,
+                                                                   adj_gradient=adj_gradient,
+                                                                   verbose=False),
+                                                           split))
+                except AssertionError:
+                    pool.restart()
+                    response_i, gradient_i = zip(*pool.map(partial(self.J_KU,
+                                                                   parallel=False,
+                                                                   adj_gradient=adj_gradient,
+                                                                   verbose=False),
+                                                           split))
+            else:
+                try:
+                    response_i = pool.map(partial(self.J_KU,
+                                                  parallel=False,
+                                                  adj_gradient=adj_gradient,
+                                                  verbose=False),
+                                          split)
+                except AssertionError:
+                    pool.restart()
+                    response_i = pool.map(partial(self.J_KU,
+                                                  parallel=False,
+                                                  adj_gradient=adj_gradient,
+                                                  verbose=False),
+                                          split)
+
+                    # array_split necessary ?
+            print('Time elapsed for parallelized computations: {}'.
+                  format(time.time() - start))
+            response = np.asarray([item for sublist in response_i
+                                   for item in sublist])
+            if adj_gradient:
+                gradient = np.asarray([item for sublist in gradient_i
+                                       for item in sublist])
+            pool.close()
+            pool.join()
+
+
+        if verbose:
+            print('Mean time for computation: {}'.format((time.time() - start_fun) / npoints))
+        if adj_gradient:
+            return response, gradient
+        else:
+            return response
 
 
 def main():
@@ -202,7 +297,32 @@ def main():
     ref = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt,
                                  idx_observation=np.arange(49, 200, 50, dtype=int),
                                  bcL=bcsin_ref)
-    href = ref.direct_simulation()[1]
+    ref.direct_simulation()
+
+    model = CostSWE(ref)
+    KU = np.atleast_2d([[0.1, 0.5],
+                        [0.1, 1.0],
+                        [0.1, 1.5],
+                        [0.2, 0.5],
+                        [0.2, 1.0],
+                        [0.2, 1.5],
+                        [0.0, 0.5],
+                        [0.0, 1.0],
+                        [0.0, 2.0],
+                        [0.05, 0.0],
+                        [0.05, 1.0],
+                        [0.2, 1.5],
+                        [0.0, 0.5],
+                        [0.0, 1.0],
+                        [0.0, 2.0],
+                        [0.05, 0.0],
+                        [0.05, 1.0]])
+    model.J_KU(KU, adj_gradient=False, parallel=True)
+
+
+
+
+
 
     test = ShallowWaterSimulation(T=T, b=b, K=[0.1],
                                   idx_observation=np.arange(49, 200, 50, dtype=int),
