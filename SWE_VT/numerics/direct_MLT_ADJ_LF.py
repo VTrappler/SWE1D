@@ -134,80 +134,80 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 
 
 # ------------------------------------------------------------------------------
-def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_R, verbose = False):
-    # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
-    dx = np.fabs(np.diff(D))/N
-    xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
-    x = np.linspace(D[0], D[1],N+1)
-    h = h0(xr)
-    q = q(xr)
-    Nt =1+ T/dt
-    h_array = np.zeros([xr.shape[0],Nt])
-    q_array = np.zeros([xr.shape[0],Nt])
-    t_array = np.zeros(Nt)
-    eta = 7./3.
+# def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_R, verbose = False):
+#     # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
+#     dx = np.fabs(np.diff(D))/N
+#     xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
+#     x = np.linspace(D[0], D[1],N+1)
+#     h = h0(xr)
+#     q = q(xr)
+#     Nt =1+ T/dt
+#     h_array = np.zeros([xr.shape[0],Nt])
+#     q_array = np.zeros([xr.shape[0],Nt])
+#     t_array = np.zeros(Nt)
+#     eta = 7./3.
     
-    if callable(Kvec):
-        K = Kvec(xr)
-        Kt = 'function'
-    else:
-        K = Kvec
-        Kt = 'array'
+#     if callable(Kvec):
+#         K = Kvec(xr)
+#         Kt = 'function'
+#     else:
+#         K = Kvec
+#         Kt = 'array'
     
-    # Modification de la hauteur d'eau, si il y a une bathy non constante
-    if b is not None:
-        h = h - b(xr)
+#     # Modification de la hauteur d'eau, si il y a une bathy non constante
+#     if b is not None:
+#         h = h - b(xr)
         
-    # gradient de la bathy
-    if b is not None:
-        B = b(xr)
-        DB = (B[2:] - B[:-2]) / (2 * dx)
-        DB0 = (B[1] - B[0]) / dx
-        DBend = (B[-1] - B[-2]) / dx
-        DB = np.insert(DB, 0, [DB0])
-        DB = np.append(DB, [DBend])
+#     # gradient de la bathy
+#     if b is not None:
+#         B = b(xr)
+#         DB = (B[2:] - B[:-2]) / (2 * dx)
+#         DB0 = (B[1] - B[0]) / dx
+#         DBend = (B[-1] - B[-2]) / dx
+#         DB = np.insert(DB, 0, [DB0])
+#         DB = np.append(DB, [DBend])
         
-    t = 0
-    i = 0
-    if verbose:
-        print 'Debut de la simulation'
-        print 'K  = ', Kt
-        print 'Nt = ', Nt
-        print 'Nx = ', N
+#     t = 0
+#     i = 0
+#     if verbose:
+#         print 'Debut de la simulation'
+#         print 'K  = ', Kt
+#         print 'Nt = ', Nt
+#         print 'Nx = ', N
         
-    while t < T:
+#     while t < T:
 
-        # Calcul du flux numerique, et valeur propre max
-        [Fh, Fhu, lmax, lmin] = compute_flux_1d(h, q, F, DF, g, num_flux, dt, dx)
-        # Adaptation du pas de temps, avec condition CFL
-        # dt = min (T-t, CFL * dx/lmax)
+#         # Calcul du flux numerique, et valeur propre max
+#         [Fh, Fhu, lmax, lmin] = compute_flux_1d(h, q, F, DF, g, num_flux, dt, dx)
+#         # Adaptation du pas de temps, avec condition CFL
+#         # dt = min (T-t, CFL * dx/lmax)
 
-        # Terme source
-        if b  is not None:
-            S = -g * h * DB
+#         # Terme source
+#         if b  is not None:
+#             S = -g * h * DB
 
-        fric_quad = - K*q*np.fabs(q)*( h **(-eta))
-        # maj des variables d'etat conservatives
+#         fric_quad = - K*q*np.fabs(q)*( h **(-eta))
+#         # maj des variables d'etat conservatives
 
-        h  = h - dt/dx * np.diff(Fh)
-        q  = q - dt/dx * np.diff(Fhu)
-        if b is not None:
-            q = hu + dt*S
-        q = hu + dt*fric_quad
-        t = t+dt
+#         h  = h - dt/dx * np.diff(Fh)
+#         q  = q - dt/dx * np.diff(Fhu)
+#         if b is not None:
+#             q = hu + dt*S
+#         q = hu + dt*fric_quad
+#         t = t+dt
         
-        # Conditions aux limites
-        [h, q] = boundary_L(h,q,t)
-        [h, q] = boundary_R(h,q,t)
+#         # Conditions aux limites
+#         [h, q] = boundary_L(h,q,t)
+#         [h, q] = boundary_R(h,q,t)
         
-        [h_array[:,i], q_array[:,i]] = [h,hu]
+#         [h_array[:, i], q_array[:, i]] = [h,hu]
 
-        # Sauve pas de temps courant, et update i
-        t_array[i] = t        
-        i = i+1
-    print 'Fin de la simulation'
+#         # Sauve pas de temps courant, et update i
+#         t_array[i] = t        
+#         i = i + 1
+#     print 'Fin de la simulation'
     
-    return [xr] + [h_array] + [q_array] + [t_array]
+#     return [xr] + [h_array] + [q_array] + [t_array]
 
 
 # ------------------------------------------------------------------------------

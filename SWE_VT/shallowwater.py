@@ -34,6 +34,7 @@ def BCsin(h, hu, t, mean_h, amplitude_vector, fundperiod, phase):
     return [h] + [hu]
 
 
+
 class ShallowWaterSimulation:
     def __init__(self,
                  D=[0, 100],
@@ -358,51 +359,53 @@ class CostSWE:
 
 
 def main():
+    """
+    Main script to execute for testing purpose or prototyping
+    """
+    # bcsin_ref = lambda h, hu, t: BCsin(h, hu, t, 16, [1, 5, 0.5, 0.25], fundperiod=20,
+    #                                    phase=0)
 
-    bcsin_ref = lambda h, hu, t: BCsin(h, hu, t, 16, [1, 5, 0.5, 0.25], fundperiod=20,
-                                       phase=0)
+    # # bcsumsin_sim = lambda h, hu, t: BCsumsin(h, hu, t, 'L', 16, [5, 0.7, 0, 0.3], 5, 0)
 
-    # bcsumsin_sim = lambda h, hu, t: BCsumsin(h, hu, t, 'L', 16, [5, 0.7, 0, 0.3], 5, 0)
+    # D = [0, 100]
+    # N = 200  # Nombre de volumes
+    # dx = np.diff(D)[0] / float(N)  # Largeur des volumes
+    # xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
+    # b = lambda x: 10 * x / D[1] + 0.5 * np.cos(x / 3) + 3 / (1 + np.exp(-3 * (x - 50)))
+    # T = 50
+    # dt = 0.03
+    # Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
 
-    D = [0, 100]
-    N = 200  # Nombre de volumes
-    dx = np.diff(D)[0] / float(N)  # Largeur des volumes
-    xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
-    b = lambda x: 10 * x / D[1] + 0.5 * np.cos(x / 3) + 3 / (1 + np.exp(-3 * (x - 50)))
-    T = 50
-    dt = 0.03
-    Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
+    # ref = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt,
+    #                              idx_observation=np.arange(49, 200, 50, dtype=int),
+    #                              bcL=bcsin_ref)
+    # ref.direct_simulation()
 
-    ref = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt,
-                                 idx_observation=np.arange(49, 200, 50, dtype=int),
-                                 bcL=bcsin_ref)
-    ref.direct_simulation()
+    # def bc_example(h, hu, t, U):
+    #     amplitude_vector = [1, U, 0.5, 0.25]
+    #     return BCsin(h, hu, t, 16, amplitude_vector, fundperiod=20,
+    #                  phase=0)
 
-    def bc_example(h, hu, t, U):
-        amplitude_vector = [1, U, 0.5, 0.25]
-        return BCsin(h, hu, t, 16, amplitude_vector, fundperiod=20,
-                     phase=0)
+    # model = CostSWE(ref, bc_example)
 
-    model = CostSWE(ref, bc_example)
-
-    KU = np.atleast_2d([[0.1, 0.5],
-                        [0.1, 1.0],
-                        [0.1, 1.5],
-                        [0.2, 0.5],
-                        [0.2, 1.0],
-                        [0.2, 1.5],
-                        [0.0, 0.5],
-                        [0.0, 1.0],
-                        [0.0, 2.0],
-                        [0.05, 0.0],
-                        [0.05, 1.0],
-                        [0.2, 1.5],
-                        [0.0, 0.5],
-                        [0.0, 1.0],
-                        [0.0, 2.0],
-                        [0.05, 0.0],
-                        [0.05, 1.0]])
-    model.J_KU(KU, adj_gradient=False, parallel=True)
+    # KU = np.atleast_2d([[0.1, 0.5],
+    #                     [0.1, 1.0],
+    #                     [0.1, 1.5],
+    #                     [0.2, 0.5],
+    #                     [0.2, 1.0],
+    #                     [0.2, 1.5],
+    #                     [0.0, 0.5],
+    #                     [0.0, 1.0],
+    #                     [0.0, 2.0],
+    #                     [0.05, 0.0],
+    #                     [0.05, 1.0],
+    #                     [0.2, 1.5],
+    #                     [0.0, 0.5],
+    #                     [0.0, 1.0],
+    #                     [0.0, 2.0],
+    #                     [0.05, 0.0],
+    #                     [0.05, 1.0]])
+    # model.J_KU(KU, adj_gradient=False, parallel=True)
 
 
     ## Periodic BC
@@ -411,7 +414,7 @@ def main():
     dx = np.diff(D)[0] / float(N)  # Largeur des volumes
     xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
     b = lambda x: np.zeros_like(x)
-    T = 10
+    T = 30
     dt = 0.003
     Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
 
@@ -420,11 +423,11 @@ def main():
         """
         Must return h, hu
         """
-        c = 300
-        add = np.exp(-(np.mod(xr - c * t, D[1]))**2 / 20)
+        # c = 300
+        # add = np.exp(-(np.mod(xr - c * t, D[1]))**2 / 20)
         # add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
         # add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
-        h[0] = h[0] + dt * np.sin(t * np.pi / 2.0)
+        h[0] = h[0] + np.sin(t * np.pi / 1.0) + 0.5 * np.sin(t * np.pi / 0.5) + 0.1 * np.sin(t * np.pi / 6.0)
         # h = h + 0.5 * add# + 0.01 * add2
         return h, hu
 
@@ -433,17 +436,18 @@ def main():
         """
         Must return h, hu
         """
-        c = 1
         np.exp(-(xr - t)**2 / 20)
         add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
         add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
         hu = hu + 0.2 * add + 0.00 * add2
         return h, hu
 
+    def bathy(x):
+        return 5.0 * (1 - np.cos(2 * np.pi * x / D[1])) / 2.0
+    
+    h0 = lambda x: 10 * np.ones_like(x) + 10 * np.exp(-(x - 50)**2 / 50)
 
-    h0 = lambda x: 10 * np.ones_like(x) + 20 * np.exp(-(x - 50)**2 / 50)
-
-    ref = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt, h0=h0(xr), N=N,
+    ref = ShallowWaterSimulation(T=T, b=bathy, K=Kref, dt=dt, h0=h0(xr), N=N,
                                  bcL=BCperiodic, periodic=True, external_forcing=external_forcing,
                                  numflux=rusanov_flux)
     ref2 = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt, h0=h0(xr), N=N,
@@ -453,12 +457,9 @@ def main():
     _ = ref.direct_simulation()
     _ = ref2.direct_simulation()
 
-    animate_SWE(xr, [ref.ssh], b, D, ylim = [0, 30])
-
-
+    animate_SWE(xr, [ref.ssh], bathy, D, ylim = [0, 30])
+    animate_SWE(np.linspace(0, 1000, 2000),
+                [np.vstack([ref.ssh, ref.ssh])], b=bathy, D=[0, 1000], ylim = [0, 30])
 
 if __name__ == '__main__':
     main()
-
-    import matplotlib.pyplot as plt
-

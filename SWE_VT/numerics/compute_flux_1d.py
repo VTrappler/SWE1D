@@ -18,11 +18,14 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic=False):
         # Valeur des indices droite ou gauche
         if periodic:
             if i == 0:
-                L = N - 1
-                R = 1
+                L = N - 2
+                R = 0
             elif i == N - 1:
                 L = N - 2
                 R = 0
+            else:
+                L = i - 1
+                R = i
         else:
             L = max(0, i - 1)
             R = min(i, N - 2)
