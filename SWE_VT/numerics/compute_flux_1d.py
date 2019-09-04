@@ -6,7 +6,7 @@ from variables import PrimitiveVars
 
 
 # ------------------------------------------------------------------------------
-def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
+def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic=False):
     # Initialisation des variables
     N = h.shape[0] + 1
     Fh = np.zeros(N)
@@ -16,8 +16,16 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
     [h, u] = PrimitiveVars(h, hu)
     for i in xrange(0, N):
         # Valeur des indices droite ou gauche
-        L = max(0, i - 1)
-        R = min(i, N - 2)
+        if periodic:
+            if i == 0:
+                L = N - 1
+                R = 1
+            elif i == N - 1:
+                L = N - 2
+                R = 0
+        else:
+            L = max(0, i - 1)
+            R = min(i, N - 2)
         # DF = |u| + (g*h)**0.5
 
         lmaxvec[i] = max(u[L] + np.sqrt(np.max(h[L], 0) * g),

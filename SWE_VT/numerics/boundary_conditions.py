@@ -74,6 +74,11 @@ def BCsumsin(h, hu, t, side, mean_h, amplitude_vector, fundperiod, phase):
     return [h] + [hu]
 
 
+# ------------------------------------------------------------------------------
+def BCperiodic(h, hu, t):
+    h[0], h[-1] = h[-1], h[0]
+    hu[0], hu[-1], hu[-1], hu[0]
+    return [h] + [hu]
 
 
 bcL = lambda h, hu, t: BC(h, hu, t, 'L')

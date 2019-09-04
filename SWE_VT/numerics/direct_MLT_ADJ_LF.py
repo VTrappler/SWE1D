@@ -29,7 +29,12 @@ def F(h, u, g):
 
 # ------------------------------------------------------------------------------
 def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
-                  Kvec, boundary_L, boundary_R, verbose = False):
+                  Kvec, boundary_L, boundary_R, periodic=False,
+                  external_forcing=None,
+                  verbose=False):
+    """
+    Perform a direct simulation of the SW
+    """
     # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
     dx = np.fabs(np.diff(D)) / N
     xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0 , N)
@@ -48,7 +53,7 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         u = u0
     Nt = int(T / dt + 1)
     h_array = np.zeros([xr.shape[0], Nt])
-    u_array = np.zeros([xr.shape[0] ,Nt])
+    u_array = np.zeros([xr.shape[0], Nt])
     t_array = np.zeros(Nt)
     eta = 7./3.
     if callable(Kvec):
@@ -86,16 +91,16 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 
         # Calcul du flux numerique, et valeur propre max
         # [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx)
-        [Fh,Fhu, lmax,lmin] = compute_flux_1d(h, hu, F, DF, g, LF_flux, dt, dx)
+        [Fh, Fhu, lmax, lmin] = compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic)
         
         # Adaptation du pas de temps, avec condition CFL
         # dt = min (T-t, CFL * dx/lmax)
     
         # Terme source
-        if b  is not None:
+        if b is not None:
             S = -g * h * DB
 
-        fric_quad = - K*hu*np.fabs(hu)*(h**(-eta))
+        fric_quad = - K * hu * np.fabs(hu) * (h**(-eta))
         # maj des variables d'etat conservatives
 
         h   -= dt/dx * np.diff(Fh)
@@ -109,9 +114,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         t += dt
         
         # Conditions aux limites
-        [h, hu] = boundary_L(h, hu, t)
-        [h, hu] = boundary_R(h, hu, t)
-        
+        if not periodic:
+            [h, hu] = boundary_L(h, hu, t)
+            [h, hu] = boundary_R(h, hu, t)
+        else:
+            [h, hu] = boundary_L(h, hu, t)
+
+        if external_forcing is not None:
+            [h, hu] = external_forcing(h, hu, t)
+            
         [h_array[:, i], u_array[:, i]] = PrimitiveVars(h, hu)
         
         # Sauve pas de temps courant, et update i

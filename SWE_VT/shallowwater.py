@@ -3,17 +3,19 @@
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 from multiprocessing import Pool, cpu_count
 from pathos.multiprocessing import ProcessingPool
 from functools import partial
 
-from SWE_VT.numerics.LaxFriedrichs import LF_flux
+from SWE_VT.numerics.numerical_flux import LF_flux, rusanov_flux
 import SWE_VT.numerics.direct_MLT_ADJ_LF as diradj
 from SWE_VT.animation_SWE import animate_SWE
 from SWE_VT.numerics.boundary_conditions import (bcR,
                                                  bcL_A, bcR_A,
-                                                 BCrand)
+                                                 BCrand,
+                                                 BCperiodic)
 from SWE_VT.numerics.interpolation_tools import interp
 from SWE_VT.cost import cost_observations as cst
 
@@ -43,8 +45,11 @@ class ShallowWaterSimulation:
                  b=None,
                  leftBC=[20, 0, 5.0, 15.0],
                  K=None,
+                 numflux=LF_flux,
                  idx_observation=None,
-                 bcL=None):
+                 bcL=None,
+                 periodic=False,
+                 external_forcing=None):
         """ Create a ShallowWaterSimulation object
 
         The shallow water model is initialized with the following parameters:
@@ -97,18 +102,37 @@ class ShallowWaterSimulation:
         self.h_reference = None
         self.ssh = None
         self.J_cost = None
+        self.periodic = periodic
+        self.external_forcing = external_forcing
+        self.numflux = numflux
+
+    def summary(self):
+        print('--------------------------------------------')
+        print('     Shallow Water Simulation instance')
+        print('--------------------------------------------')
+        print('Domain:   D={}, dx={}, Nvolumes={}'.format(self.D, self.dx, self.N))
+        print('Stop Time T={}, dt={}, Ntimesteps={}'.
+              format(self.T, self.dt, int(self.T / self.dt) + 1))
+        if self.periodic is False:
+            per = 'No'
+        else:
+            per = 'Yes'
+        print('Periodic BC: {}'.format(per))
+        print('Numerical Flux: {}'.format(self.numflux.func_name))
 
 
     def direct_simulation(self):
         """ Performs a direct run of the model specified
 
         """
+        self.summary()
         [xr, h, u, t] = diradj.shallow_water(self.D, g, self.T,
                                              self.h0, self.u0,
-                                             self.N, LF_flux,
+                                             self.N, self.numflux,
                                              self.dt, self.b,
                                              self.Karray, self.bcLeft,
-                                             bcR)
+                                             bcR, self.periodic,
+                                             external_forcing=self.external_forcing)
         self.ssh = h
         self.u = u
         return xr, h, u, t
@@ -118,11 +142,11 @@ class ShallowWaterSimulation:
         """ Continues the direct run of the model, between T and T2
         """
         if self.b is not None:
-            to_add = self.b(self.xr)
+            bathymetry = self.b(self.xr)
         else:
-            to_add = 0
+            bathymetry = 0
         if h0 is None:
-            h0 = self.ssh[:, -1] + to_add
+            h0 = self.ssh[:, -1] + bathymetry
         if u0 is None:
             u0 = self.u[:, -1]
         [xr, h, u, tbis] = diradj.shallow_water(self.D, g, T2,
@@ -130,6 +154,29 @@ class ShallowWaterSimulation:
                                                 self.N, LF_flux,
                                                 self.dt, self.b,
                                                 self.Karray, self.bcLeft,
+                                                bcR)
+        return xr, h, u, tbis
+
+
+    def continue_simulation_par(self, Karray, bcL, T2, h0=None, u0=None):
+        """ Continues the direct run of the model, between T and T2
+        with bottom friction and bcL changed
+        """
+        if self.b is not None:
+            bathymetry = self.b(self.xr)
+        else:
+            bathymetry = 0
+        if h0 is None:
+            h0 = self.ssh[:, -1] + bathymetry
+        if u0 is None:
+            u0 = self.u[:, -1]
+        if Karray is None:
+            Karray = self.Karray
+        [xr, h, u, tbis] = diradj.shallow_water(self.D, g, T2,
+                                                h0, u0,
+                                                self.N, LF_flux,
+                                                self.dt, self.b,
+                                                Karray, bcL,
                                                 bcR)
         return xr, h, u, tbis
 
@@ -166,20 +213,20 @@ class ShallowWaterSimulation:
 
 
 class CostSWE:
-    def __init__(self, ref):
+    def __init__(self, ref, bcL_U):
         """
 
         """
         self.ref = ref
         _, self.obs_mat = cst.J_function_observation_init(self.ref.ssh,
                                                           self.ref.idx_observation)
+        self.bcL = bcL_U
+
 
 
     def create_simulation(self, K, U):
         sr = self.ref
-        amplitude_vector = [0, U, 0.5, 0.25]
-        bcsinsim = lambda h, hu, t: BCsin(h, hu, t, 16, amplitude_vector, fundperiod=20,
-                                          phase=0)
+        bc_for_sim = lambda h, hu, t: self.bcL(h, hu, t, U)
         swesim = ShallowWaterSimulation(D=sr.D,
                                         T=sr.T,
                                         dt=sr.dt,
@@ -190,7 +237,7 @@ class CostSWE:
                                         leftBC=None,
                                         K=K,
                                         idx_observation=sr.idx_observation,
-                                        bcL=bcsinsim)
+                                        bcL=bc_for_sim)
         swesim.set_reference(self.ref.ssh)
         return swesim
 
@@ -254,9 +301,6 @@ class CostSWE:
                 if verbose:
                     print('Time elapsed for unparallelized computations: {}'.
                           format(time.time() - start))
-
-
-
         else:  # Parallelized computations
             try:
                 pool = ProcessingPool(nodes = ncores)
@@ -334,7 +378,13 @@ def main():
                                  bcL=bcsin_ref)
     ref.direct_simulation()
 
-    model = CostSWE(ref)
+    def bc_example(h, hu, t, U):
+        amplitude_vector = [1, U, 0.5, 0.25]
+        return BCsin(h, hu, t, 16, amplitude_vector, fundperiod=20,
+                     phase=0)
+
+    model = CostSWE(ref, bc_example)
+
     KU = np.atleast_2d([[0.1, 0.5],
                         [0.1, 1.0],
                         [0.1, 1.5],
@@ -355,44 +405,60 @@ def main():
     model.J_KU(KU, adj_gradient=False, parallel=True)
 
 
+    ## Periodic BC
+    D = [0, 500]
+    N = 1000  # Nombre de volumes
+    dx = np.diff(D)[0] / float(N)  # Largeur des volumes
+    xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
+    b = lambda x: np.zeros_like(x)
+    T = 10
+    dt = 0.003
+    Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
 
 
+    def external_forcing(h, hu, t):
+        """
+        Must return h, hu
+        """
+        c = 300
+        add = np.exp(-(np.mod(xr - c * t, D[1]))**2 / 20)
+        # add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
+        # add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
+        h[0] = h[0] + dt * np.sin(t * np.pi / 2.0)
+        # h = h + 0.5 * add# + 0.01 * add2
+        return h, hu
 
 
-    test = ShallowWaterSimulation(T=T, b=b, K=[0.1],
-                                  idx_observation=np.arange(49, 200, 50, dtype=int),
-                                  bcL=bcsin_sim)
-    test.direct_simulation()
+    def external_forcing2(h, hu, t):
+        """
+        Must return h, hu
+        """
+        c = 1
+        np.exp(-(xr - t)**2 / 20)
+        add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
+        add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
+        hu = hu + 0.2 * add + 0.00 * add2
+        return h, hu
 
-    animate_SWE(xr, [href, test.ssh], b, D, [0, 50])
 
-    _, h50, u50, tbis = test.continue_simulation(50)
+    h0 = lambda x: 10 * np.ones_like(x) + 20 * np.exp(-(x - 50)**2 / 50)
 
-    test.set_reference(href)
-    J, G = test.compute_cost()
+    ref = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt, h0=h0(xr), N=N,
+                                 bcL=BCperiodic, periodic=True, external_forcing=external_forcing,
+                                 numflux=rusanov_flux)
+    ref2 = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt, h0=h0(xr), N=N,
+                                  bcL=BCperiodic, periodic=True, external_forcing=external_forcing,
+                                  numflux=LF_flux)
 
-    def J_K(K):
-        K = np.asarray([K])
-        test = ShallowWaterSimulation(T=T, b=b, K=K,
-                                      idx_observation=np.arange(49, 200, 50, dtype=int),
-                                      bcL=bcsin_sim)
-        test.set_reference(href)
-        J, G = test.compute_cost()
-        return J
-    rss = []
-    for k in np.linspace(0, 0.25, 15):
-        rss.append(J_K(k))
-    import matplotlib.pyplot as plt
-    plt.plot(rss)
-    plt.show()
-    test = CostSWE(ref)
-    start = time.time()
-    test.J([0.2], 5)
-    interm = time.time()
-    print(interm - start)
-    test.JG([0.2], 5)
-    print(time.time() - interm)
+    _ = ref.direct_simulation()
+    _ = ref2.direct_simulation()
+
+    animate_SWE(xr, [ref.ssh], b, D, ylim = [0, 30])
+
 
 
 if __name__ == '__main__':
     main()
+
+    import matplotlib.pyplot as plt
+
