@@ -410,12 +410,12 @@ def main():
 
     ## Periodic BC
     D = [0, 500]
-    N = 1000  # Nombre de volumes
+    N = 500  # Nombre de volumes
     dx = np.diff(D)[0] / float(N)  # Largeur des volumes
     xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2, N)  # Milieux des volumes
     b = lambda x: np.zeros_like(x)
-    T = 30
-    dt = 0.003
+    T = 100
+    dt = 0.001
     Kref = 0.2 * (1 + np.sin(2 * np.pi * xr / D[1]))
 
 
@@ -427,7 +427,7 @@ def main():
         # add = np.exp(-(np.mod(xr - c * t, D[1]))**2 / 20)
         # add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
         # add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
-        h[0] = h[0] + np.sin(t * np.pi / 1.0) + 0.5 * np.sin(t * np.pi / 0.5) + 0.1 * np.sin(t * np.pi / 6.0)
+        hu[0] = hu[0] + np.sin(t * np.pi / 1.0) + 0.3 * np.sin(3 * t * np.pi) + 0.1 * np.sin(t * np.pi / 6.0)
         # h = h + 0.5 * add# + 0.01 * add2
         return h, hu
 
@@ -436,28 +436,25 @@ def main():
         """
         Must return h, hu
         """
-        np.exp(-(xr - t)**2 / 20)
-        add = np.sin(xr * np.pi / (D[1])) * np.sin(t / 2.0)
-        add2 = np.sin(2 * xr * np.pi / (D[1])) * np.sin(t / 1.0)
-        hu = hu + 0.2 * add + 0.00 * add2
+        hu[0] = hu[0] + np.sin(t * np.pi / 1.0) + 0.3 * np.sin(3 * t * np.pi) #+ 0.1 * np.sin(t * np.pi / 6.0)
         return h, hu
 
     def bathy(x):
-        return 5.0 * (1 - np.cos(2 * np.pi * x / D[1])) / 2.0
+        return 1.0 * (1 - np.cos(2 * np.pi * x / D[1])) / 2.0
     
-    h0 = lambda x: 10 * np.ones_like(x) + 10 * np.exp(-(x - 50)**2 / 50)
+    h0 = lambda x: 5 * np.ones_like(x) + 10 * np.exp(-(x - 50)**2 / 50)
 
     ref = ShallowWaterSimulation(T=T, b=bathy, K=Kref, dt=dt, h0=h0(xr), N=N,
                                  bcL=BCperiodic, periodic=True, external_forcing=external_forcing,
                                  numflux=rusanov_flux)
-    ref2 = ShallowWaterSimulation(T=T, b=b, K=Kref, dt=dt, h0=h0(xr), N=N,
-                                  bcL=BCperiodic, periodic=True, external_forcing=external_forcing,
-                                  numflux=LF_flux)
+    ref2 = ShallowWaterSimulation(T=T, b=bathy, K=Kref, dt=dt, h0=h0(xr), N=N,
+                                  bcL=BCperiodic, periodic=True, external_forcing=external_forcing2,
+                                  numflux=rusanov_flux)
 
     _ = ref.direct_simulation()
     _ = ref2.direct_simulation()
 
-    animate_SWE(xr, [ref.ssh], bathy, D, ylim = [0, 30])
+    animate_SWE(xr, [ref.ssh, ref2.ssh], bathy, D, ylim = [0, 30])
     animate_SWE(np.linspace(0, 1000, 2000),
                 [np.vstack([ref.ssh, ref.ssh])], b=bathy, D=[0, 1000], ylim = [0, 30])
 
