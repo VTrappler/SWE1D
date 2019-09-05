@@ -108,7 +108,7 @@ class ShallowWaterSimulation:
         self.numflux = numflux
 
     def summary(self):
-        print('--------------------------------------------')
+        print('\n--------------------------------------------')
         print('     Shallow Water Simulation instance')
         print('--------------------------------------------')
         print('Domain:   D={}, dx={}, Nvolumes={}'.format(self.D, self.dx, self.N))

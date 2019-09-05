@@ -83,10 +83,10 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
     t = 0
     i = 0
     if verbose:
-        print 'Debut de la simulation'
-        print 'K  = ', Kt
-        print 'Nt = ', Nt
-        print 'Nx = ', N
+        print('Debut de la simulation')
+        print('K  = {}'.format(Kt))
+        print('Nt = {}'.format(Nt))
+        print('Nx = {}'.format(N))
     while t < T:
 
         # Calcul du flux numerique, et valeur propre max
@@ -124,11 +124,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
             [h, hu] = external_forcing(h, hu, t)
             
         [h_array[:, i], u_array[:, i]] = PrimitiveVars(h, hu)
+
         
+        if np.all(np.isnan(h)):
+            print('Computation gives NaN(s)')
+            break
         # Sauve pas de temps courant, et update i
         t_array[i] = t        
         i = i + 1
-    if verbose: print 'Fin de la simulation'
+    if verbose: print('Fin de la simulation')
     
     return [xr] + [h_array] + [u_array] + [t_array]
 
