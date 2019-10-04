@@ -30,7 +30,7 @@ def F(h, u, g):
 # ------------------------------------------------------------------------------
 def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
                   Kvec, boundary_L, boundary_R, periodic=False,
-                  external_forcing=None,
+                  external_forcing=None, tstart=0.0,
                   verbose=False):
     """
     Perform a direct simulation of the SW
@@ -53,7 +53,9 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         u = u0
     Nt = int(T / dt + 1)
     h_array = np.zeros([xr.shape[0], Nt])
+    h_array[:, 0] = h
     u_array = np.zeros([xr.shape[0], Nt])
+    u_array[:, 0] = u
     t_array = np.zeros(Nt)
     eta = 7./3.
     if callable(Kvec):
@@ -80,14 +82,14 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         DB = np.append(DB, [DBend])
         # maxB = np.fmax(B[:-1],B[1:])
 
-    t = 0
-    i = 0
+    t = tstart
+    i = 1
     if verbose:
         print('Debut de la simulation')
         print('K  = {}'.format(Kt))
         print('Nt = {}'.format(Nt))
         print('Nx = {}'.format(N))
-    while t < T:
+    while t <= (T + tstart):
 
         # Calcul du flux numerique, et valeur propre max
         # [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx)
@@ -103,8 +105,8 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         fric_quad = - K * hu * np.fabs(hu) * (h**(-eta))
         # maj des variables d'etat conservatives
 
-        h   -= dt/dx * np.diff(Fh)
-        hu  -= dt/dx * np.diff(Fhu)
+        h   -= dt / dx * np.diff(Fh)
+        hu  -= dt / dx * np.diff(Fhu)
         if b is not None:
             # dd = g*(h[2:]**2 - h[:-2]**2)/(2.*dx)
             # dd = np.insert(dd,0,[0])
@@ -328,7 +330,7 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
     t = T
     i = Nt - 2
     # print 'Debut resolution modele adjoint'
-    while i>-1:
+    while i > -1:
 
         [subA, diagA, supA] = ALFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K)
         [subB, diagB, supB] = BLFcons(h[:, i + 1], q[:, i + 1], g, dt, dx, K)
@@ -354,7 +356,7 @@ def adjoint_shallow_water(D, g, T, N, dt, b, Kvec,
             + dt*(-2*K*np.sign(q[:,i+1])*q[:,i+1]*h[:,i+1]**(-eta))*q_A[:,i+1]
 
         t = t - dt
-        i = i-1
+        i = i - 1
     # print 'Fin du modele adjoint'
     if isinstance(K,(list,np.ndarray)):
         # grad = np.sum(-(h[:,:-1]**(-eta)) * q[:,:-1] * np.fabs(q[:,:-1]) * q_A,1)
@@ -413,14 +415,14 @@ def shallow_water_RSS_grad_observation(D, g, T, h0, u0, N,
 def lineaire_tangent_shallow_water_regul(D, g, T, N, dt, b,
                                          Kvec, dK0, h, u,
                                          href, bcL_d, bcR_d, alpha, Kb):
-    dx = np.fabs(np.diff(D))/N
-    xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
-    Nt = T/dt +  1
-    h_d = np.zeros([xr.shape[0],Nt])
-    q_d = np.zeros([xr.shape[0],Nt])
+    dx = np.fabs(np.diff(D)) / N
+    xr = np.linspace(D[0] + dx / 2, D[1] - dx / 2 , N)
+    Nt = T / dt +  1
+    h_d = np.zeros([xr.shape[0], Nt])
+    q_d = np.zeros([xr.shape[0], Nt])
     t_d = np.zeros(Nt)
-    eta = 7./3.
-    lam = dx/dt
+    eta = 7. / 3.
+    lam = dx / dt
     
     if b is not None:
         B = b(xr)
@@ -436,39 +438,43 @@ def lineaire_tangent_shallow_water_regul(D, g, T, N, dt, b,
     if callable(Kvec):
         K = Kvec(xr)
     else:
-        K = Kvec*np.ones(xr.shape[0])
+        K = Kvec * np.ones(xr.shape[0])
     dK = dK0 * np.ones(xr.shape[0])
     i = 0
     t = 0
-    q = h*u
-    while i<Nt-1:
+    q = h * u
+    while i < Nt - 1:
         
-        [subA,diagA,supA] = ALFcons(h[:,i],q[:,i],g,dt,dx,K)
-        [subB,diagB,supB] = BLFcons(h[:,i],q[:,i],g,dt,dx,K)
-        [subC,diagC,supC] = CLFcons(h[:,i],q[:,i],g,dt,dx,K,DZ)
-        [subD,diagD,supD] = DLFcons(h[:,i],q[:,i],g,dt,dx,K)
+        [subA, diagA, supA] = ALFcons(h[:, i], q[:, i],
+                                      g, dt, dx, K)
+        [subB, diagB, supB] = BLFcons(h[:, i], q[:, i],
+                                      g, dt, dx, K)
+        [subC, diagC, supC] = CLFcons(h[:, i], q[:, i],
+                                      g, dt, dx, K, DZ)
+        [subD, diagD, supD] = DLFcons(h[:, i], q[:, i],
+                                      g, dt, dx, K)
         
-        Amat = create_tridiag(subA,diagA,supA)
-        Bmat = create_tridiag(subB,diagB,supB)
-        Cmat = create_tridiag(subC,diagC,supC)
-        Dmat = create_tridiag(subD,diagD,supD)
+        Amat = create_tridiag(subA, diagA, supA)
+        Bmat = create_tridiag(subB, diagB, supB)
+        Cmat = create_tridiag(subC, diagC, supC)
+        Dmat = create_tridiag(subD, diagD, supD)
 
-        h_d[:,i+1] = h_d[:,i] - (dt/(2.*dx))*( Amat.dot(h_d[:,i]) \
-                                               + Bmat.dot(q_d[:,i]))
+        h_d[:, i + 1] = h_d[:, i] - (dt / (2. * dx)) * (Amat.dot(h_d[:, i]) \
+                                                        + Bmat.dot(q_d[:, i]))
 
-        q_d[:,i+1] = q_d[:,i] - (dt/(2.*dx))*(Cmat.dot(h_d[:,i])
-                                              + Dmat.dot(q_d[:,i]))\
-            - dt*2* K *np.sign(q[:,i])*q[:,i]*(h[:,i]**(-eta)) * q_d[:,i] \
-            - dt*q[:,i]*np.fabs(q[:,i])*(h[:,i]**(-eta)) * dK \
-            + dt*K*(eta)*q[:,i]*np.fabs(q[:,i])*(h[:,i]**(-eta-1)) * h_d[:,i]\
-            - dt*g*DZ * h_d[:,i]
+        q_d[:, i + 1] = q_d[:, i] - (dt / (2. * dx)) * (Cmat.dot(h_d[:, i])
+                                              + Dmat.dot(q_d[:, i]))\
+            - dt * 2 * K * np.sign(q[:, i]) * q[:, i] * (h[:, i]**(-eta)) * q_d[:, i] \
+            - dt * q[:, i] * np.fabs(q[:, i]) * (h[:, i]**(-eta)) * dK \
+            + dt * K * (eta) * q[:, i] * np.fabs(q[:, i]) * (h[:, i]**(-eta - 1)) * h_d[:, i]\
+            - dt * g * DZ * h_d[:, i]
         
-        [h_d[:,i+1],q_d[:,i+1]] = bcL_d(h_d[:,i+1],q_d[:,i+1],t)
-        [h_d[:,i+1],q_d[:,i+1]] = bcR_d(h_d[:,i+1],q_d[:,i+1],t)
+        [h_d[:, i + 1], q_d[:, i + 1]] = bcL_d(h_d[:, i + 1], q_d[:, i + 1], t)
+        [h_d[:, i + 1], q_d[:, i + 1]] = bcR_d(h_d[:, i + 1], q_d[:, i + 1], t)
         
         t = t + dt
-        i = i+1
-    dj = np.sum((h-href) * h_d) + alpha * (K - Kb)*dK
+        i = i + 1
+    dj = np.sum((h - href) * h_d) + alpha * (K - Kb) * dK
     print 'dj = ', dj
     return [h_d] + [q_d] + [dj]
 
@@ -503,43 +509,48 @@ def adjoint_regul(D,g,T,N, dt, b, Kvec,h_array,u_array, ecartObs,bcL_A, bcR_A, a
     else:
         DZ = np.zeros([xr.shape[0]])
     t = T
-    i = Nt-2
+    i = Nt - 2
     # print 'Debut resolution modele adjoint'
-    while i>-1:
+    while i > -1:
 
-        [subA,diagA,supA] = ALFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
-        [subB,diagB,supB] = BLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
-        [subC,diagC,supC] = CLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K,DZ)
-        [subD,diagD,supD] = DLFcons(h[:,i+1],q[:,i+1],g,dt,dx,K)
+        [subA, diagA, supA] = ALFcons(h[:, i + 1], q[:, i + 1],
+                                      g, dt, dx, K)
+        [subB, diagB, supB] = BLFcons(h[:, i + 1], q[:, i + 1],
+                                      g, dt, dx, K)
+        [subC, diagC, supC] = CLFcons(h[:, i + 1], q[:, i + 1],
+                                      g, dt, dx, K, DZ)
+        [subD, diagD, supD] = DLFcons(h[:, i + 1], q[:, i + 1],
+                                      g, dt, dx, K)
 
-        Astar = create_tridiag(subA,diagA,supA).T
-        Bstar = create_tridiag(subB,diagB,supB).T
-        Cstar = create_tridiag(subC,diagC,supC).T
-        Dstar = create_tridiag(subD,diagD,supD).T
+        Astar = create_tridiag(subA, diagA, supA).T
+        Bstar = create_tridiag(subB, diagB, supB).T
+        Cstar = create_tridiag(subC, diagC, supC).T
+        Dstar = create_tridiag(subD, diagD, supD).T
 
-        [h_A[:,i+1],q_A[:,i+1]] = bcL_A(h_A[:,i+1],q_A[:,i+1],t)
-        [h_A[:,i+1],q_A[:,i+1]] = bcR_A(h_A[:,i+1],q_A[:,i+1],t)
+        [h_A[:, i + 1], q_A[:, i + 1]] = bcL_A(h_A[:, i + 1], q_A[:, i + 1], t)
+        [h_A[:, i + 1], q_A[:, i + 1]] = bcR_A(h_A[:, i + 1], q_A[:, i + 1], t)
         
-        h_A[:,i] = h_A[:,i+1] - (dt/(2.*dx))*(Astar.dot(h_A[:,i+1])\
-                                                    + Cstar.dot(q_A[:,i+1]))\
-            + dt*ecartObs[:,i+1] \
-            - dt*g*DZ*q_A[:,i+1]\
-            + dt*K*(eta)*q[:,i+1]*np.fabs(q[:,i+1])*(h[:,i+1]**(-eta-1))*q_A[:,i+1]
+        h_A[:, i] = h_A[:, i + 1] - (dt / (2. * dx)) * (Astar.dot(h_A[:, i + 1])\
+                                                        + Cstar.dot(q_A[:, i + 1]))\
+            + dt * ecartObs[:, i + 1] \
+            - dt * g * DZ * q_A[:, i + 1]\
+            + dt * K * (eta) * q[:, i + 1] * np.fabs(q[:, i + 1]) * (h[:, i + 1]**(-eta - 1))*q_A[:, i + 1]
 
-        q_A[:,i] = q_A[:,i+1] - (dt/(2.*dx))*(Bstar.dot(h_A[:,i+1])\
-                                                     + Dstar.dot(q_A[:,i+1]))\
-            + dt*(-2*K*np.sign(q[:,i+1])*q[:,i+1]*h[:,i+1]**(-eta))*q_A[:,i+1]
+        q_A[:, i] = q_A[:, i + 1] - (dt / (2. * dx)) * (Bstar.dot(h_A[:, i + 1])\
+                                                        + Dstar.dot(q_A[:, i + 1]))\
+                                                        + dt * (-2 * K * np.sign(q[:, i + 1])
+                                                                * q[:, i + 1] * h[:, i + 1]**(-eta)) * q_A[:, i + 1]
 
         t = t - dt
-        i = i-1
+        i = i - 1
     # print 'Fin du modele adjoint'
-    if isinstance(K,(list,np.ndarray)):
+    if isinstance(K, (list, np.ndarray)):
         # grad = np.sum(-(h[:,:-1]**(-eta)) * q[:,:-1] * np.fabs(q[:,:-1]) * q_A,1)
-        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta),1)
+        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta), 1)
  
     else:
         # grad = np.sum(-(h[:,:-1]**(-eta)) * q[:,:-1] * np.fabs(q[:,:-1]) * q_A)
-        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta)) + alpha*(K-Kb)
+        grad = -np.sum(q * np.fabs(q) * q_A * h**(-eta)) + alpha*(K - Kb)
 
     return [h_A] + [q_A] + [grad]
 
@@ -548,12 +559,13 @@ def shallow_water_RSS_grad_regul(D, g, T, h0, u0, N, num_flux, dt,
                                  b, Kvec, bcL, bcR, bcL_A, bcR_A,
                                  href, cost_fun, alpha, Kb):
     # Modèle direct
-    [xr,h_array,u_array,t] = shallow_water(D,g,T,h0,u0,N, num_flux, dt, b, Kvec,bcL, bcR)
+    [xr, h_array, u_array,t] = shallow_water(D, g, T, h0, u0, N,
+                                             num_flux, dt, b, Kvec, bcL, bcR)
     ecartObs = h_array - href
     
     # Modèle adjoint
-    [h_A,q_A,grad] = adjoint_regul(D, g, T, N, dt, b, Kvec, h_array, u_array,
-                                   ecartObs, bcL_A, bcR_A, alpha, Kb)
+    [h_A, q_A, grad] = adjoint_regul(D, g, T, N, dt, b, Kvec, h_array, u_array,
+                                     ecartObs, bcL_A, bcR_A, alpha, Kb)
     cost = cost_fun(h_array, href)
     print 'J(K) = ', cost
     print '||grad J||**2 =', np.sum(grad**2)
@@ -597,7 +609,7 @@ def shallow_water_reconstruit(D, g, T, h0, u0, N, num_flux, dt, b,
         DBend = (B[-1] - B[-2]) / dx
         DB = np.insert(DB, 0, [DB[0]])
         DB = np.append(DB, [DB[-1]])
-        maxB = np.fmax(B[:-1],B[1:])
+        maxB = np.fmax(B[:-1], B[1:])
 
     t = 0
     i = 0
@@ -614,7 +626,7 @@ def shallow_water_reconstruit(D, g, T, h0, u0, N, num_flux, dt, b,
         # S_pL = 0.5*g*(h[:-1]**2 - h_pL**2)
         # S_mR = 0.5*g*(h[1:]**2 - h_pR**2)
         # Calcul du flux numerique, et valeur propre max
-        [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux,dt,dx)
+        [Fh, Fhu, lmax, lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx)
 
         # Adaptation du pas de temps, avec condition CFL
         # dt = min (T-t, CFL * dx/lmax)
@@ -625,26 +637,26 @@ def shallow_water_reconstruit(D, g, T, h0, u0, N, num_flux, dt, b,
 
         # maj des variables d'etat conservatives
         for j in xrange(1,N-1,1):
-            h[j] = h[j] - dt/dx * (Fh[j+1] - Fh[j])
-            if h[j]>0:
-                hu[j] = hu[j] - dt/dx * (Fhu[j+1] - Fhu[j]) \
-                        + g*dt/(2*dx) * (h_pL[j]**2 - h[j-1]**2 + h[j]**2 - h_pR[j]**2)
+            h[j] = h[j] - dt / dx * (Fh[j + 1] - Fh[j])
+            if h[j] > 0:
+                hu[j] = hu[j] - dt / dx * (Fhu[j + 1] - Fhu[j]) \
+                        + g * dt / (2 * dx) * (h_pL[j]**2 - h[j - 1]**2 + h[j]**2 - h_pR[j]**2)
             else:
                 hu[j] = 0
-        fric_quad = - K*hu*np.fabs(hu)*(h**(-eta))
+        fric_quad = - K * hu * np.fabs(hu) * (h**(-eta))
 
-        hu = hu + dt*fric_quad
-        t = t+dt
+        hu = hu + dt * fric_quad
+        t = t + dt
         
         # Conditions aux limites
-        [h, hu] = boundary_L(h,hu,t)
-        [h, hu] = boundary_R(h,hu,t)
+        [h, hu] = boundary_L(h, hu, t)
+        [h, hu] = boundary_R(h, hu, t)
         
-        [h_array[:,i], u_array[:,i]] = PrimitiveVars(h,hu)
+        [h_array[:, i], u_array[:, i]] = PrimitiveVars(h, hu)
         
         # Sauve pas de temps courant, et update i
         t_array[i] = t        
-        i = i+1
+        i = i + 1
     print 'Fin de la simulation'
     
     return [xr] + [h_array] + [u_array] + [t_array]

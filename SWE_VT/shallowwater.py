@@ -18,6 +18,7 @@ from SWE_VT.numerics.boundary_conditions import (bcR,
                                                  BCperiodic)
 from SWE_VT.numerics.interpolation_tools import interp
 from SWE_VT.cost import cost_observations as cst
+import itertools
 
 g = 9.81
 eta = 7. / 3.
@@ -44,7 +45,6 @@ class ShallowWaterSimulation:
                  h0=lambda x: 20 * np.ones_like(x),
                  u0=lambda x: np.zeros_like(x),
                  b=None,
-                 leftBC=[20, 0, 5.0, 15.0],
                  K=None,
                  numflux=LF_flux,
                  idx_observation=None,
@@ -71,14 +71,20 @@ class ShallowWaterSimulation:
             function of the initial water discharge
         b: callable
             function defining the bathymetry
-        leftBC: list
+        leftBC: list (to be removed ?)
             default parameters to be used in [mean_h, amplitude, period, phase] model
         K: float or array of floats
             bottom friction to be used in the simulation
+        numflux: callable
+            function that computes the numerical flux in finite volume
         idx_observation: list of int
             where the water height is observed in the cost function evaluation
         bcL: callable
             function defining the boundary conditions at the left of the domain
+        periodic: boolean
+            periodic boundary conditions to be considered
+        external_forcing: callable
+            function to be call (as a callback) to modify state vector
         """
 
         self.D = D
@@ -94,11 +100,7 @@ class ShallowWaterSimulation:
         K_transform = interp(Karray, D)
         self.Karray = np.array(map(K_transform, self.xr))
         self.Kcoeff = np.asarray(K)
-        if bcL is None:
-            self.bcLeft = lambda h, hu, t: BCrand(h, hu, t, 'L',
-                                                  leftBC[0], leftBC[1], leftBC[2], leftBC[3])
-        else:
-            self.bcLeft = bcL
+        self.bcLeft = bcL
         self.idx_observation = idx_observation
         self.h_reference = None
         self.ssh = None
@@ -133,13 +135,14 @@ class ShallowWaterSimulation:
                                              self.dt, self.b,
                                              self.Karray, self.bcLeft,
                                              bcR, self.periodic,
-                                             external_forcing=self.external_forcing)
+                                             external_forcing=self.external_forcing,
+                                             tstart=0.0)
         self.ssh = h
         self.u = u
         return xr, h, u, t
 
 
-    def continue_simulation(self, T2, h0=None, u0=None):
+    def continue_simulation(self, tstart, T2, h0=None, u0=None):
         """ Continues the direct run of the model, between T and T2
         """
         if self.b is not None:
@@ -154,12 +157,15 @@ class ShallowWaterSimulation:
                                                 h0, u0,
                                                 self.N, LF_flux,
                                                 self.dt, self.b,
-                                                self.Karray, self.bcLeft,
-                                                bcR)
+                                                self.Karray,
+                                                self.bcLeft,
+                                                bcR, self.periodic,
+                                                external_forcing=self.external_forcing,
+                                                tstart=tstart)
         return xr, h, u, tbis
 
 
-    def continue_simulation_par(self, Karray, bcL, T2, h0=None, u0=None):
+    def continue_simulation_par(self, Karray, bcL, T2, tstart=None, h0=None, u0=None):
         """ Continues the direct run of the model, between T and T2
         with bottom friction and bcL changed
         """
@@ -173,12 +179,17 @@ class ShallowWaterSimulation:
             u0 = self.u[:, -1]
         if Karray is None:
             Karray = self.Karray
+        if tstart is None:
+            tstart = self.T
         [xr, h, u, tbis] = diradj.shallow_water(self.D, g, T2,
                                                 h0, u0,
                                                 self.N, LF_flux,
                                                 self.dt, self.b,
-                                                Karray, bcL,
-                                                bcR)
+                                                Karray,
+                                                bcL, bcR,
+                                                self.periodic,
+                                                external_forcing=self.external_forcing,
+                                                tstart=tstart)
         return xr, h, u, tbis
 
 
@@ -235,10 +246,12 @@ class CostSWE:
                                         h0=sr.h0,
                                         u0=sr.u0,
                                         b=sr.b,
-                                        leftBC=None,
                                         K=K,
                                         idx_observation=sr.idx_observation,
-                                        bcL=bc_for_sim)
+                                        bcL=bc_for_sim,
+                                        periodic=sr.periodic,
+                                        external_forcing=sr.external_forcing,
+                                        numflux=sr.numflux)
         swesim.set_reference(self.ref.ssh)
         return swesim
 
@@ -356,6 +369,81 @@ class CostSWE:
             return response, gradient
         else:
             return response
+
+
+
+    def comparison_predictions(self, Karray, u, utrue, Tpred, BCtrue, BCsim=None,
+                               parallel=True, ncores=None):
+        if BCsim is None:
+            BCsim = self.bcL
+        if ncores is None:
+            ncores = cpu_count()
+        pred = []
+        for u_t in utrue:
+            if parallel:
+                try:
+                    pool = ProcessingPool(nodes=ncores)
+                except AssertionError:
+                    pool.restart()
+            print('u start {}'.format(u_t))
+            bcLtrue = lambda h, q, t: BCtrue(h, q, t, u_t)
+            _, htruepred, _, _ = self.ref.continue_simulation_par(Karray=None,
+                                                                  bcL=bcLtrue,
+                                                                  T2=Tpred)
+
+            def continuation(ku_s, single=False):
+                print('Continuation start')
+                if single:
+                    k, u_sim = ku_s
+                    Ka = np.array(map(interp(k, self.ref.D), self.ref.xr))
+                    bcL = lambda h, q, t: BCsim(h, q, t, u_sim)
+                    _, hpred, _, _ = self.ref.continue_simulation_par(Karray=np.asarray(Ka),
+                                                                      bcL=bcL,
+                                                                      T2=Tpred)
+                    cost = np.sum((htruepred - hpred)**2)
+                else:
+                    cost = np.empty(len(ku_s))
+                    for i, ku_iter in enumerate(ku_s):
+                        k, u_sim = ku_iter
+                        Ka = np.array(map(interp(k, self.ref.D), self.ref.xr))
+                        bcL = lambda h, q, t: BCsim(h, q, t, u_sim)
+                        _, hpred, _, _ = self.ref.continue_simulation_par(Karray=np.asarray(Ka),
+                                                                          bcL=bcL,
+                                                                          T2=Tpred)
+                        cost[i] = np.sum((htruepred - hpred)**2)
+                return cost
+
+            points = list(itertools.product(*[Karray, u]))
+            if not parallel:
+                for k, u_sim in points:
+                    cost = continuation((k, u_sim), single=True)
+                    pred.append([u_t, u_sim, k, cost])
+
+            elif parallel:
+                print('Parallelization start')
+
+                split = np.array_split(points, ncores, 0)
+                try:
+                    print 'start again'
+                    pool = ProcessingPool(nodes=ncores)
+                    pred_i = pool.map(continuation, split)
+
+                except AssertionError:
+                    print 'exception'
+                    pool.restart()
+                    pred_i = pool.map(continuation, split)
+
+                # pool.close()
+                pred_i = np.asarray([item for sublist in pred_i
+                                     for item in sublist])
+                pred.append(pred_i)
+        if parallel:
+            pool.close()
+            pool.join()
+            properties = np.asarray([[ut, u_, K] for ut in utrue for K in Karray for u_ in u])
+            pred = np.asarray(pred).flatten()
+            pred = np.hstack([properties, np.atleast_2d(pred).T])
+        return np.asarray(pred)
 
 
 def main():

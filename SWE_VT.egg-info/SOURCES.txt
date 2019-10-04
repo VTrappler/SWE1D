@@ -20,5 +20,6 @@ SWE_VT/numerics/boundary_conditions.py
 SWE_VT/numerics/compute_flux_1d.py
 SWE_VT/numerics/direct_MLT_ADJ_LF.py
 SWE_VT/numerics/interpolation_tools.py
+SWE_VT/numerics/numerical_flux.py
 SWE_VT/numerics/rusanov.py
 SWE_VT/numerics/variables.py
