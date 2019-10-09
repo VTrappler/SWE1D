@@ -109,6 +109,7 @@ class ShallowWaterSimulation:
         self.external_forcing = external_forcing
         self.numflux = numflux
 
+
     def summary(self):
         print('\n--------------------------------------------')
         print('     Shallow Water Simulation instance')

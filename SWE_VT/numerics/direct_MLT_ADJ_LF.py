@@ -2,14 +2,12 @@
 #-*- coding: utf-8 -*-
 
 import numpy as np
-
-from LaxFriedrichs import LF_flux
+# from LaxFriedrichs import LF_flux
 from compute_flux_1d import compute_flux_1d, compute_flux_1d_bis
 from variables import ConservedVars, PrimitiveVars
 from adjoint_function import ALFcons, BLFcons, CLFcons, DLFcons
 
 g = 9.81
-
 
 
 # ------------------------------------------------------------------------------
@@ -37,7 +35,7 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
     """
     # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
     dx = np.fabs(np.diff(D)) / N
-    xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0 , N)
+    xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0, N)
     x = np.linspace(D[0], D[1], N + 1)
     if callable(h0):
         h = h0(xr).squeeze()
@@ -51,27 +49,27 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         # if h0.squeeze().shape[0] != xr.shape[0]:
         #     pass# TODO: Add error
         u = u0
-    Nt = int(T / dt + 1)
+    Nt = int((T - tstart) / dt + 1)
     h_array = np.zeros([xr.shape[0], Nt])
     h_array[:, 0] = h
     u_array = np.zeros([xr.shape[0], Nt])
     u_array[:, 0] = u
-    t_array = np.zeros(Nt)
-    eta = 7./3.
+    t_array = np.empty(Nt)
+    eta = 7. / 3.
     if callable(Kvec):
         K = Kvec(xr)
         Kt = 'function'
     else:
         K = Kvec
         Kt = 'array'
-    
+
     # Modification de la hauteur d'eau, si il y a une bathy non constante
     if b is not None:
         h = h - b(xr).squeeze()
-        
+
     # Passage en var conservatives
     [h, hu] = ConservedVars(h, u)
-    #hu = h*u
+    #  hu = h*u
     # gradient de la bathy
     if b is not None:
         B = b(xr)
@@ -89,15 +87,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         print('K  = {}'.format(Kt))
         print('Nt = {}'.format(Nt))
         print('Nx = {}'.format(N))
-    while t <= (T + tstart):
-
+    # while t < T:
+    while i < Nt:
         # Calcul du flux numerique, et valeur propre max
         # [Fh,Fhu, lmax,lmin] = compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx)
         [Fh, Fhu, lmax, lmin] = compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic)
-        
+
         # Adaptation du pas de temps, avec condition CFL
         # dt = min (T-t, CFL * dx/lmax)
-    
+
         # Terme source
         if b is not None:
             S = -g * h * DB
@@ -105,16 +103,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
         fric_quad = - K * hu * np.fabs(hu) * (h**(-eta))
         # maj des variables d'etat conservatives
 
-        h   -= dt / dx * np.diff(Fh)
-        hu  -= dt / dx * np.diff(Fhu)
+        h -= dt / dx * np.diff(Fh)
+        hu -= dt / dx * np.diff(Fhu)
         if b is not None:
             # dd = g*(h[2:]**2 - h[:-2]**2)/(2.*dx)
             # dd = np.insert(dd,0,[0])
             # S = np.append(dd,0)
             hu += dt * S
         hu += dt * fric_quad
-        t += dt
-        
+
         # Conditions aux limites
         if not periodic:
             [h, hu] = boundary_L(h, hu, t)
@@ -124,23 +121,29 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 
         if external_forcing is not None:
             [h, hu] = external_forcing(h, hu, t)
-            
-        [h_array[:, i], u_array[:, i]] = PrimitiveVars(h, hu)
+        try:
+            [h_array[:, i], u_array[:, i]] = PrimitiveVars(h, hu)
+            t_array[i] = t
+        except IndexError:
+            print('IndexError thrown')
+            print('i: {}, t: {}, T: {}'.format(i, t, T))
+            print('Nt: {}'.format(Nt))
 
-        
+
         if np.all(np.isnan(h)):
             print('Computation gives NaN(s)')
             break
         # Sauve pas de temps courant, et update i
-        t_array[i] = t        
+        t += dt
         i = i + 1
-    if verbose: print('Fin de la simulation')
-    
+    if verbose:
+        print('Fin de la simulation')
+
     return [xr] + [h_array] + [u_array] + [t_array]
 
 
 # ------------------------------------------------------------------------------
-# def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_R, verbose = False):
+# def shallow_water_bis(D,g,T,h0,q0,N, num_flux, dt, b, Kvec,boundary_L, boundary_R, verbose=False):
 #     # Definition du pas, et initialisation des CI, et du vecteur des demi indices xr
 #     dx = np.fabs(np.diff(D))/N
 #     xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
@@ -152,18 +155,17 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 #     q_array = np.zeros([xr.shape[0],Nt])
 #     t_array = np.zeros(Nt)
 #     eta = 7./3.
-    
 #     if callable(Kvec):
 #         K = Kvec(xr)
 #         Kt = 'function'
 #     else:
 #         K = Kvec
 #         Kt = 'array'
-    
+
 #     # Modification de la hauteur d'eau, si il y a une bathy non constante
 #     if b is not None:
 #         h = h - b(xr)
-        
+
 #     # gradient de la bathy
 #     if b is not None:
 #         B = b(xr)
@@ -172,7 +174,7 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 #         DBend = (B[-1] - B[-2]) / dx
 #         DB = np.insert(DB, 0, [DB0])
 #         DB = np.append(DB, [DBend])
-        
+
 #     t = 0
 #     i = 0
 #     if verbose:
@@ -180,7 +182,7 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 #         print 'K  = ', Kt
 #         print 'Nt = ', Nt
 #         print 'Nx = ', N
-        
+
 #     while t < T:
 
 #         # Calcul du flux numerique, et valeur propre max
@@ -201,18 +203,18 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 #             q = hu + dt*S
 #         q = hu + dt*fric_quad
 #         t = t+dt
-        
+
 #         # Conditions aux limites
 #         [h, q] = boundary_L(h,q,t)
 #         [h, q] = boundary_R(h,q,t)
-        
+
 #         [h_array[:, i], q_array[:, i]] = [h,hu]
 
 #         # Sauve pas de temps courant, et update i
-#         t_array[i] = t        
+#         t_array[i] = t
 #         i = i + 1
 #     print 'Fin de la simulation'
-    
+
 #     return [xr] + [h_array] + [q_array] + [t_array]
 
 
@@ -224,15 +226,15 @@ def shallow_water(D, g, T, h0, u0, N, num_flux, dt, b,
 def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
                                    dK0, h, u, href,
                                    bcL_d, bcR_d, obs_mat = None):
-    dx = np.fabs(np.diff(D))/N
-    xr = np.linspace(D[0] + dx/2, D[1] - dx/2 , N)
-    Nt = T/dt +  1
-    h_d = np.zeros([xr.shape[0],Nt])
-    q_d = np.zeros([xr.shape[0],Nt])
+    dx = np.fabs(np.diff(D)) / N
+    xr = np.linspace(D[0] + dx / 2.0, D[1] - dx / 2.0, N)
+    Nt = T / dt + 1
+    h_d = np.zeros([xr.shape[0], Nt])
+    q_d = np.zeros([xr.shape[0], Nt])
     t_d = np.zeros(Nt)
-    eta = 7./3.
-    lam = dx/dt
-    
+    eta = 7. / 3.
+    lam = dx / dt
+
     if b is not None:
         B = b(xr)
         DZ = (B[2:] - B[:-2]) / (2 * dx)
@@ -247,45 +249,46 @@ def lineaire_tangent_shallow_water(D, g, T, N, dt, b, Kvec,
     if callable(Kvec):
         K = Kvec(xr)
     else:
-        K = Kvec*np.ones(xr.shape[0])
+        K = Kvec * np.ones(xr.shape[0])
     dK = dK0 * np.ones(xr.shape[0])
     i = 0
     t = 0
-    q = h*u
-    
-    while i<Nt-1:
-        
+    q = h * u
+
+    while i < Nt - 1:
+
         [subA, diagA, supA] = ALFcons(h[:, i], q[:, i], g, dt, dx, K)
         [subB, diagB, supB] = BLFcons(h[:, i], q[:, i], g, dt, dx, K)
         [subC, diagC, supC] = CLFcons(h[:, i], q[:, i], g, dt, dx, K, DZ)
         [subD, diagD, supD] = DLFcons(h[:, i], q[:, i], g, dt, dx, K)
-        
+
         Amat = create_tridiag(subA, diagA, supA)
         Bmat = create_tridiag(subB, diagB, supB)
         Cmat = create_tridiag(subC, diagC, supC)
         Dmat = create_tridiag(subD, diagD, supD)
 
-        h_d[:,i+1] = h_d[:,i] - (dt/(2.*dx))*( Amat.dot(h_d[:,i]) \
-                                               + Bmat.dot(q_d[:,i]))
+        h_d[:, i + 1] = h_d[:, i] - (dt / (2. * dx)) * (Amat.dot(h_d[:, i]) +
+                                                        Bmat.dot(q_d[:, i]))
 
-        q_d[:,i+1] = q_d[:,i] - (dt/(2.*dx))*(Cmat.dot(h_d[:,i])
-                                              + Dmat.dot(q_d[:,i]))\
-            - dt*2* K *np.sign(q[:,i])*q[:,i]*(h[:,i]**(-eta)) * q_d[:,i] \
-            - dt*q[:,i]*np.fabs(q[:,i])*(h[:,i]**(-eta)) * dK \
-            + dt*K*(eta)*q[:,i]*np.fabs(q[:,i])*(h[:,i]**(-eta-1)) * h_d[:,i]\
-            - dt*g*DZ * h_d[:,i]
-        
-        [h_d[:,i+1],q_d[:,i+1]] = bcL_d(h_d[:,i+1],q_d[:,i+1],t)
-        [h_d[:,i+1],q_d[:,i+1]] = bcR_d(h_d[:,i+1],q_d[:,i+1],t)
-        
+        q_d[:, i + 1] = q_d[:, i] - (dt / (2. * dx)) * (Cmat.dot(h_d[:, i]) +
+                                                        Dmat.dot(q_d[:, i]))
+        q_d[:, i + 1] += -dt * 2 * K * np.sign(q[:, i]) * q[:, i] * (h[:, i]**(-eta)) * q_d[:, i]
+        q_d[:, i + 1] += -dt * q[:, i] * np.fabs(q[:, i]) * (h[:, i]**(-eta)) * dK
+        q_d[:, i + 1] += dt * K * (eta) * q[:, i] * (np.fabs(q[:, i]) *
+                                                     (h[:, i]**(-eta - 1)) * h_d[:, i])
+        q_d[:, i + 1] += -dt * g * DZ * h_d[:, i]
+
+        [h_d[:, i + 1], q_d[:, i + 1]] = bcL_d(h_d[:, i + 1], q_d[:, i + 1], t)
+        [h_d[:, i + 1], q_d[:, i + 1]] = bcR_d(h_d[:, i + 1], q_d[:, i + 1], t)
+
         t = t + dt
-        i = i+1
+        i = i + 1
     # print 'Fin du modele lineaire tangent'
-    
+
     if obs_mat is None:
-        dj = np.sum((h-href) * h_d) 
+        dj = np.sum((h - href) * h_d)
     else:
-        dj = np.sum(obs_mat.T.dot(obs_mat.dot(h-href)) * h_d)
+        dj = np.sum(obs_mat.T.dot(obs_mat.dot(h - href)) * h_d)
     print 'dj = ', dj
     return [h_d] + [q_d] + [dj]
 
