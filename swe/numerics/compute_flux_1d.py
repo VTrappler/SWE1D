@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from variables import PrimitiveVars
+from .variables import PrimitiveVars
 
 
 # ------------------------------------------------------------------------------
-def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
+def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic=False):
     # Initialisation des variables
     N = h.shape[0] + 1
     Fh = np.zeros(N)
@@ -14,16 +14,29 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
     lmaxvec = np.zeros(N)
     lminvec = np.zeros(N)
     [h, u] = PrimitiveVars(h, hu)
-    for i in xrange(0, N):
+    for i in range(0, N):
         # Valeur des indices droite ou gauche
-        L = max(0, i - 1)
-        R = min(i, N - 2)
+        if periodic:
+            if i == 0:
+                L = N - 2
+                R = 0
+            elif i == N - 1:
+                L = N - 2
+                R = 0
+            else:
+                L = i - 1
+                R = i
+        else:
+            L = max(0, i - 1)
+            R = min(i, N - 2)
         # DF = |u| + (g*h)**0.5
 
-        lmaxvec[i] = max(u[L] + np.sqrt(np.max(h[L], 0) * g),
-                         u[R] + np.sqrt(np.max(h[R], 0) * g))
-        lminvec[i] = min(u[L] - np.sqrt(np.max(h[L], 0) * g),
-                         u[R] + np.sqrt(np.max(h[R], 0) * g))
+        lmaxvec[i] = max(
+            u[L] + np.sqrt(np.max(h[L], 0) * g), u[R] + np.sqrt(np.max(h[R], 0) * g)
+        )
+        lminvec[i] = min(
+            u[L] - np.sqrt(np.max(h[L], 0) * g), u[R] + np.sqrt(np.max(h[R], 0) * g)
+        )
         # F fonction de flux (de l'equation initiale)
         [FhL, FhuL] = F(h[L], u[L], g)
         [FhR, FhuR] = F(h[R], u[R], g)
@@ -36,7 +49,6 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx):
     return [Fh, Fhu, lmax, lmin]
 
 
-
 def compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx):
     # Initialisation des variables
     N = h.shape[0] + 1
@@ -45,7 +57,7 @@ def compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx):
     lmaxvec = np.zeros(N)
     lminvec = np.zeros(N)
     [h, u] = PrimitiveVars(h, hu)
-    for i in xrange(0, N):
+    for i in range(0, N):
         # Valeur des indices droite ou gauche
         L = max(0, i - 1)
         R = min(i, N - 2)

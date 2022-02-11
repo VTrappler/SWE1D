@@ -28,7 +28,7 @@ def animate_curve(i, lines, h, b, xr):
 
 
 # ------------------------------------------------------------------------------
-def animate_SWE(xr, h, b, D, ylim = [0, 10]):
+def animate_SWE(xr, h, b, D, ylim=[0, 10]):
     """
     Create an animation of the temporal evolution of the sea surface height
 
@@ -55,19 +55,24 @@ def animate_SWE(xr, h, b, D, ylim = [0, 10]):
     plt.ylim(ylim[0], ylim[1])
     animate = lambda i: animate_curve(i, lines, h, b, xr)
     init = lambda: init_lines(lines)
-    ani = animation.FuncAnimation(fig, animate, init_func=init,
-                                  frames=h[0].shape[1], blit=True,
-                                  interval=1, repeat=False)
-    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color = [0.5, 0.5, 0.5])
-    plt.xlabel('xr')
-    plt.ylabel('h')
-    plt.show()
+    ani = animation.FuncAnimation(
+        fig,
+        animate,
+        init_func=init,
+        frames=h[0].shape[1],
+        blit=True,
+        interval=1,
+        repeat=False,
+    )
+    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color=[0.5, 0.5, 0.5])
+    plt.xlabel("xr")
+    plt.ylabel("h")
     return ani
 
 
 # ------------------------------------------------------------------------------
 def snapshot(h, t, xr, b, D):
-    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color = [0.5, 0.5, 0.5])
+    plt.fill_between(xr.squeeze(), b(xr).squeeze(), color=[0.5, 0.5, 0.5])
     for j, hl in enumerate(h):
         plt.plot(hl[:, t] + b(xr))
     plt.show()
