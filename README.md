@@ -6,9 +6,9 @@ Main project: vtrapple/These>
 
 
 ## Installation
-This project is not (yet?) on the python package index (PyPI), hence has to be cloned from this gitlab repository (root access may be needed to install):
+This project is not on the python package index (PyPI), hence has to be cloned from this gitlab repository (root access may be needed to install):
 ```
-git clone git@gitlab.inria.fr:vtrapple/SWE_VT.git
+git clone git@github.com:vtrapple/SWE_VT.git
 cd SWE_VT
 python setup.py install
 ```
