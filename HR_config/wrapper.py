@@ -28,7 +28,7 @@ from swe.numerics.interpolation_tools import interp_cst
 # -- Paramètres du modèle -----------------------------------------------------
 
 D = [0, 100]  # Domaine spatial
-T = 15  # Fin de la simulation
+T = 60  # Fin de la simulation
 dt = 0.03  # Pas de temps
 g = 9.81  # Constante de gravitation
 N = 200  # Nombre de volumes
