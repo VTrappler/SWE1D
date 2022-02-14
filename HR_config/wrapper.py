@@ -336,7 +336,7 @@ def J_KAP(
     """
     Kcoeff = np.asarray(Kcoeff)
     K_transform = interp(Kcoeff)
-    K = np.array(map(K_transform, xr))
+    K = np.fromiter(map(K_transform, xr), dtype=float)
     cost, grad = J_grad_observed(K, A, P, idx_to_observe, hreference)
     grad_sum_length = int(xr.shape[0] / Kcoeff.size)
     grad_coeff = np.zeros(Kcoeff.size)
@@ -377,7 +377,7 @@ def J_KAP_nograd(
     """
     Kcoeff = np.asarray(Kcoeff)
     K_transform = interp(Kcoeff)
-    K = np.array(map(K_transform, xr))
+    K = np.fromiter(map(K_transform, xr), dtype=float)
     bcL = lambda h, hu, t: BCrand(h, hu, t, "L", mean_h, A, P, phase)
     _, hcomputed, _, _ = diradj.shallow_water(
         D, g, T, h0, u0, N, LF_flux, dt, b, K, bcL, bcR
@@ -393,7 +393,7 @@ def J_KAP_nograd(
 def J_piecewise_grad(Kcoeff, hreference=href):
     """Piecewise constant interpolation of K, then computes cost function and gradient"""
     K_transform = interp(Kcoeff)
-    K = np.array(map(K_transform, xr))
+    K = np.fromiter(map(K_transform, xr), dtype=float)
     cost, grad = J_grad(K)
     grad_sum_length = int(xr.shape[0] / Kcoeff.size)
     grad_coeff = np.zeros(Kcoeff.size)
@@ -407,7 +407,7 @@ def J_piecewise_grad(Kcoeff, hreference=href):
 # ------------------------------------------------------------------------------
 def J_pw_grad_complete(Kcoeff):
     K_transform = interp(Kcoeff)
-    K = np.array(map(K_transform, xr))
+    K = np.fromiter(map(K_transform, xr), dtype=float)
     cost, grad = J_grad(K)
     return cost, grad
 

@@ -23,7 +23,7 @@ def init_lines(lines):
 # ------------------------------------------------------------------------------
 def animate_curve(i, lines, h, b, xr):
     for j, line in enumerate(lines):
-        line.set_data(xr, h[j][:, i] + b(xr))
+        line.set_data(xr, h[j][:, i] + b(xr).T)
     return lines
 
 
@@ -74,7 +74,7 @@ def animate_SWE(xr, h, b, D, ylim=[0, 10]):
 def snapshot(h, t, xr, b, D):
     plt.fill_between(xr.squeeze(), b(xr).squeeze(), color=[0.5, 0.5, 0.5])
     for j, hl in enumerate(h):
-        plt.plot(hl[:, t] + b(xr))
+        plt.plot(xr, hl[:, t] + b(xr))
     plt.show()
 
 
