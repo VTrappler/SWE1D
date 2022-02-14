@@ -1,19 +1,18 @@
-# SWE_VT
+# 1D Shallow water
 
 Numerical code modelling the 1D shallow water equations to build a toy problem of robust estimation of the bottom friction. Quadratic cost function is implemented between a reference simulation (twin experiments setting) and the simulation performed with given parameters. The gradient with respect to the bottom friction of this cost function is obtained via the adjoint model. In the module `\HR_config\`, `wrapper.py` contains readily available cost function(s)
 
-Main project: vtrapple/These>
-
-
+*The code is a bit messy, and could use a good refactoring*
 ## Installation
-This project is not on the python package index (PyPI), hence has to be cloned from this gitlab repository (root access may be needed to install):
+This project is not on the python package index (PyPI), hence has to be cloned from this git repository (root access may be needed to install):
 ```
-git clone git@github.com:vtrapple/SWE_VT.git
-cd SWE_VT
-python setup.py install
+git clone git@github.com:vtrappler/SWE1D.git
+pip install -r requirements.txt
 ```
 
 ## Examples of utilisation
+The file [example.ipynb](example.ipynb) is a notebook containing a few examples on how to use the modules
+
 ### Animation of the evolution of the sea surface heights
 ```python
 import HR_config.wrapper as swe
