@@ -2,3 +2,5 @@
 *.py~
 *.py#
 *.venvSWE1D
+*.vscode
+*.ipynb_checkpoints
