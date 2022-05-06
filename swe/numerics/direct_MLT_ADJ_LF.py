@@ -736,7 +736,7 @@ def shallow_water_reconstruit(
             S = -g * h * DB
 
         # maj des variables d'etat conservatives
-        for j in xrange(1, N - 1, 1):
+        for j in range(1, N - 1, 1):
             h[j] = h[j] - dt / dx * (Fh[j + 1] - Fh[j])
             if h[j] > 0:
                 hu[j] = (

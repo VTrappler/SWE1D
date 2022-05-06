@@ -99,7 +99,7 @@ class ShallowWaterSimulation:
         Karray = np.asarray(K)
         K_transform = interp(Karray, D)
         self.Karray = np.array(map(K_transform, self.xr))
-        self.Kcoeff = np.asarray(K)
+
         self.bcLeft = bcL
         self.idx_observation = idx_observation
         self.h_reference = None
@@ -126,9 +126,10 @@ class ShallowWaterSimulation:
         print("Periodic BC: {}".format(per))
         print("Numerical Flux: {}".format(self.numflux.func_name))
 
-    def direct_simulation(self):
+    def direct_simulation(self, verbose=False):
         """Performs a direct run of the model specified"""
-        self.summary()
+        if verbose:
+            self.summary()
         [xr, h, u, t] = diradj.shallow_water(
             self.D,
             g,
@@ -299,7 +300,7 @@ class CostSWE:
         instance_to_compare = self.create_simulation(K, U)
         # instance_to_compare.direct_simulation()
         cost, grad = instance_to_compare.compute_cost_and_gradient()
-        sizeK = instance_to_compare.Kcoeff.size
+        sizeK = instance_to_compare.Karray.size
         grad_sum_length = int(instance_to_compare.xr.shape[0] / sizeK)
         grad_coeff = np.zeros(sizeK)
         for i in range(sizeK):

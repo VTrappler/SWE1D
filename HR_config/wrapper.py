@@ -297,7 +297,7 @@ def likelihood(K, ampli=amplitude, period=period):
 
 # ------------------------------------------------------------------------------
 def interp(coef_array):
-    """Interpolation using piecewiste constant values"""
+    """Interpolation using piecewise constant values"""
     coef_array = np.array(coef_array)
     D_length = float(np.diff(D)[0])
     cell_vol = D_length / coef_array.size
