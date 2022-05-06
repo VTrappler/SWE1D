@@ -96,10 +96,8 @@ class ShallowWaterSimulation:
             self.D[0] + self.dx / 2.0, self.D[1] - self.dx / 2.0, self.N
         )
         self.b = b
-        Karray = np.asarray(K)
-        K_transform = interp(Karray, D)
-        self.Karray = np.array(map(K_transform, self.xr))
-
+        K_transform = interp(np.asarray(K), D)
+        self.Karray = np.fromiter(map(K_transform, self.xr), dtype=float)
         self.bcLeft = bcL
         self.idx_observation = idx_observation
         self.h_reference = None
