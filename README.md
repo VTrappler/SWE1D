@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ```
 
 ## Examples of utilisation
-The file [test_config.ipynb](test_config.ipynb) may be more up to date with the code. More generally, I think the HR_config folder may not be useful anymore
+The file [example_forward_tlm.ipynb](example_forward_tlm.ipynb) may be more up to date with the code. More generally, I think the HR_config folder may not be useful anymore
 
 
 
