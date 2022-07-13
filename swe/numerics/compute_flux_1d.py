@@ -13,7 +13,7 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic=False):
     Fhu = np.zeros(N)
     lmaxvec = np.zeros(N)
     lminvec = np.zeros(N)
-    [h, u] = PrimitiveVars(h, hu)
+    h, u = PrimitiveVars(h, hu)
     for i in range(0, N):
         # Valeur des indices droite ou gauche
         if periodic:
@@ -38,15 +38,15 @@ def compute_flux_1d(h, hu, F, DF, g, num_flux, dt, dx, periodic=False):
             u[L] - np.sqrt(np.max(h[L], 0) * g), u[R] + np.sqrt(np.max(h[R], 0) * g)
         )
         # F fonction de flux (de l'equation initiale)
-        [FhL, FhuL] = F(h[L], u[L], g)
-        [FhR, FhuR] = F(h[R], u[R], g)
+        FhL, FhuL = F(h[L], u[L], g)
+        FhR, FhuR = F(h[R], u[R], g)
 
         Fh[i] = num_flux(FhL, FhR, lmaxvec[i], lminvec[i], h[R], h[L], dt, dx)
         Fhu[i] = num_flux(FhuL, FhuR, lmaxvec[i], lminvec[i], hu[R], hu[L], dt, dx)
 
     lmax = np.max(lmaxvec)
     lmin = np.min(lminvec)
-    return [Fh, Fhu, lmax, lmin]
+    return Fh, Fhu, lmax, lmin
 
 
 def compute_flux_1d_bis(h, hu, F, DF, g, num_flux, dt, dx):

@@ -12,16 +12,36 @@ from functools import partial
 from swe.numerics.numerical_flux import LF_flux, rusanov_flux
 import swe.numerics.direct_MLT_ADJ_LF as diradj
 from swe.animation_SWE import animate_SWE
-from swe.numerics.boundary_conditions import bcR, bcL_A, bcR_A, BCrand, BCperiodic
+from swe.numerics.boundary_conditions import (
+    bcR,
+    bcL_A,
+    bcR_A,
+    BCrand,
+    BCperiodic,
+    bcL_d,
+    bcR_d,
+)
 from swe.numerics.interpolation_tools import interp
 from swe.cost import cost_observations as cst
 import itertools
 
+from typing import Tuple, Union, List, Callable, Optional
+
 g = 9.81
 eta = 7.0 / 3.0
 
+Vector = Union[List[float], np.ndarray]
 
-def BCsin(h, hu, t, mean_h, amplitude_vector, fundperiod, phase):
+
+def BCsin(
+    h: np.ndarray,
+    hu: np.ndarray,
+    t: float,
+    mean_h: float,
+    amplitude_vector: np.ndarray,
+    fundperiod: float,
+    phase: float,
+) -> Tuple[np.ndarray, np.ndarray]:
     """Conditions aux limites du modele direct, avec plus de paramètres"""
     h[0] = mean_h
     period = fundperiod
@@ -29,25 +49,27 @@ def BCsin(h, hu, t, mean_h, amplitude_vector, fundperiod, phase):
         h[0] += amp * np.sin((t * (2 * np.pi) / period) + phase)
         period /= 2.0
     hu[0] = 0.0
-    return [h] + [hu]
+    return h, hu
 
 
 class ShallowWaterSimulation:
     def __init__(
         self,
-        D=[0, 100],
-        T=200,
-        dt=0.03,
-        N=200,
-        h0=lambda x: 20 * np.ones_like(x),
-        u0=lambda x: np.zeros_like(x),
-        b=None,
-        K=None,
-        numflux=LF_flux,
-        idx_observation=None,
-        bcL=None,
-        periodic=False,
-        external_forcing=None,
+        D: List = [0, 100],
+        T: int = 200,
+        dt: float = 0.03,
+        N: int = 200,
+        h0: Callable[[np.ndarray], np.ndarray] = lambda x: 20 * np.ones_like(x),
+        u0: Callable[[np.ndarray], np.ndarray] = lambda x: np.zeros_like(x),
+        b: Callable = None,
+        K: Vector = None,
+        numflux: Callable = LF_flux,
+        idx_observation: List[int] = None,
+        bcL: Callable[
+            [np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]
+        ] = None,
+        periodic: bool = False,
+        external_forcing: Callable = None,
     ):
         """Create a ShallowWaterSimulation object
 
@@ -96,7 +118,8 @@ class ShallowWaterSimulation:
             self.D[0] + self.dx / 2.0, self.D[1] - self.dx / 2.0, self.N
         )
         self.b = b
-        K_transform = interp(np.asarray(K), D)
+        self.Karg = K
+        K_transform = interp(np.asarray(self.Karg), self.D)
         self.Karray = np.fromiter(map(K_transform, self.xr), dtype=float)
         self.bcLeft = bcL
         self.idx_observation = idx_observation
@@ -107,28 +130,20 @@ class ShallowWaterSimulation:
         self.external_forcing = external_forcing
         self.numflux = numflux
 
-    def summary(self):
-        print("\n--------------------------------------------")
-        print("     Shallow Water Simulation instance")
-        print("--------------------------------------------")
-        print("Domain:   D={}, dx={}, Nvolumes={}".format(self.D, self.dx, self.N))
-        print(
-            "Stop Time T={}, dt={}, Ntimesteps={}".format(
-                self.T, self.dt, int(self.T / self.dt) + 1
-            )
-        )
-        if self.periodic is False:
-            per = "No"
-        else:
-            per = "Yes"
-        print("Periodic BC: {}".format(per))
-        print("Numerical Flux: {}".format(self.numflux.func_name))
+    def __str__(self) -> str:
+        return f"1DSW Simulation:\nD={self.D}, dx={self.dx}, Nvol={self.N}\nT={self.T}, dt={self.dt}, Ntimesteps={int((self.T / self.dt) + 1)}"
 
-    def direct_simulation(self, verbose=False):
+    def summary(self):
+        print(self)
+        print("\nNumerical Flux: {}".format(self.numflux.func_name))
+
+    def direct_simulation(
+        self, verbose=False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Performs a direct run of the model specified"""
         if verbose:
             self.summary()
-        [xr, h, u, t] = diradj.shallow_water(
+        xr, h, u, t = diradj.shallow_water(
             self.D,
             g,
             self.T,
@@ -149,6 +164,62 @@ class ShallowWaterSimulation:
         self.u = u
         return xr, h, u, t
 
+    def tangent_linear(self, dK: Vector) -> Tuple[np.ndarray, np.ndarray, float]:
+        """Compute the Linear approximation of the forward model:
+        tangent_linear(dK) = simu + TLM @ dK
+        """
+        xr, h, u, t = self.direct_simulation()
+        dK_transform = interp(np.asarray(dK), self.D)
+        dK_array = np.fromiter(map(dK_transform, self.xr), dtype=float)
+        h_tlm, u_tlm, dj = diradj.lineaire_tangent_shallow_water(
+            self.D,
+            g,
+            self.T,
+            self.N,
+            self.dt,
+            self.b,
+            self.Karray,
+            dK=dK_array,
+            h=h,
+            u=u,
+            href=h,  # It may need to be modified
+            bcL_d=bcL_d,
+            bcR_d=bcR_d,
+        )
+        return h_tlm, u_tlm, dj
+
+    def jacobian_matrix(self, dim: Optional[int] = None) -> np.ndarray:
+        """Computes the Jacobian matrix of the forward model on the SSH:
+        returns an array of dimension (N * (T / dt + 1), dimK)
+
+        """
+        if dim is None:
+            dim = len(self.Karg)
+        xr, h, u, t = self.direct_simulation()
+        jac_h = np.empty((len(h.flatten()), dim))
+        for i in range(dim):
+            dK = np.zeros(dim)
+            dK[i] = 1
+            dK_transform = interp(np.asarray(dK), self.D)
+            dK_array = np.fromiter(map(dK_transform, self.xr), dtype=float)
+            h_tlm, _, _ = diradj.lineaire_tangent_shallow_water(
+                self.D,
+                g,
+                self.T,
+                self.N,
+                self.dt,
+                self.b,
+                self.Karray,
+                dK=dK_array,
+                h=h,
+                u=u,
+                href=h,
+                bcL_d=bcL_d,
+                bcR_d=bcR_d,
+            )
+            jac_h[:, i] = h_tlm.flatten()
+        return jac_h
+
     def continue_simulation(self, tstart, T2, h0=None, u0=None):
         """Continues the direct run of the model, between T and T2"""
         if self.b is not None:
@@ -159,7 +230,7 @@ class ShallowWaterSimulation:
             h0 = self.ssh[:, -1] + bathymetry
         if u0 is None:
             u0 = self.u[:, -1]
-        [xr, h, u, tbis] = diradj.shallow_water(
+        xr, h, u, tbis = diradj.shallow_water(
             self.D,
             g,
             T2,
@@ -194,7 +265,7 @@ class ShallowWaterSimulation:
             Karray = self.Karray
         if tstart is None:
             tstart = self.T
-        [xr, h, u, tbis] = diradj.shallow_water(
+        xr, h, u, tbis = diradj.shallow_water(
             self.D,
             g,
             T2,

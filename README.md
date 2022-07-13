@@ -11,6 +11,12 @@ pip install -r requirements.txt
 ```
 
 ## Examples of utilisation
+The file [test_config.ipynb](test_config.ipynb) may be more up to date with the code. More generally, I think the HR_config folder may not be useful anymore
+
+
+
+*May be obsolete below*
+
 The file [example.ipynb](example.ipynb) is a notebook containing a few examples on how to use the modules
 
 ### Animation of the evolution of the sea surface heights
