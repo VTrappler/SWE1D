@@ -1,7 +1,7 @@
 *.pyc
 *.py~
 *.py#
-*.venvSWE1D
+*.venv*
 *.vscode
 *.ipynb_checkpoints
 *.mp4
