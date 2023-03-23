@@ -5,3 +5,4 @@
 *.vscode
 *.ipynb_checkpoints
 *.mp4
+*__pycache__*

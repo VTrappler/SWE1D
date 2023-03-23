@@ -46,8 +46,11 @@ def interp(coef_array, D, fun=interp_cst):
     coef_array = np.array(coef_array)
     D_length = float(np.diff(D)[0])
     cell_vol = D_length / coef_array.size
-    pts = np.linspace(cell_vol / 2.0, D_length - cell_vol / 2.0,
-                      num = coef_array.size)
+    pts = np.linspace(
+        cell_vol / 2.0,
+        D_length - cell_vol / 2.0,
+        num=coef_array.size,
+    )
     f_to_ret = lambda x: fun(x, cell_vol, coef_array, pts)
     return f_to_ret
 

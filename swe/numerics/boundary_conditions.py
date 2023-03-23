@@ -8,6 +8,25 @@ import numpy as np
 # ------------------------------------------------------------------------------
 
 
+class BoundaryCondition:
+    def __init__(self, boundary_conditions_function, **kwargs) -> None:
+        self.bc_function = boundary_conditions_function
+        self.kwargs = kwargs
+
+    def __call__(self, h, q, t):
+        return self.bc_function(h, q, t, **self.kwargs)
+
+
+class BoundaryConditionsSeq:
+    def __init__(self, bc1, bc2) -> None:
+        self.bc1 = bc1
+        self.bc2 = bc2
+
+    def apply(self, h, q, t):
+        h1, q1 = self.bc1(h, q, t)
+        return self.bc2(h1, q2, t)
+
+
 # ------------------------------------------------------------------------------
 def BC(h, hu, t, side):
     """Conditions aux limites du modele direct"""
@@ -82,8 +101,18 @@ def BCperiodic(h, hu, t):
 
 
 bcL = lambda h, hu, t: BC(h, hu, t, "L")
+bcL = BoundaryCondition(BC, side="L")
 bcR = lambda h, hu, t: BC(h, hu, t, "R")
+bcR = BoundaryCondition(BC, side="R")
+
 bcL_d = lambda h, hu, t: BC_MLT(h, hu, "L")
+bcL_d = BoundaryCondition(BC_MLT, side="L")
+
 bcR_d = lambda h, hu, t: BC_MLT(h, hu, "R")
+bcR_d = BoundaryCondition(BC_MLT, side="R")
+
 bcL_A = lambda h, hu, t: BC_ADJ(h, hu, "L")
+bcL_A = BoundaryCondition(BC_ADJ, side="L")
+
 bcR_A = lambda h, hu, t: BC_ADJ(h, hu, "R")
+bcR_A = BoundaryCondition(BC_ADJ, side="R")

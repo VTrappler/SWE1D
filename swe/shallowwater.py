@@ -11,7 +11,7 @@ from functools import partial
 
 from swe.numerics.numerical_flux import LF_flux, rusanov_flux
 import swe.numerics.direct_MLT_ADJ_LF as diradj
-from swe.animation_SWE import animate_SWE
+from swe.animation.animation_SWE import animate_SWE
 from swe.numerics.boundary_conditions import (
     bcR,
     bcL_A,
@@ -78,7 +78,7 @@ class ShallowWaterSimulation:
         Parameters
         ----------
         D: list
-            x coordinate of the left and right boundary
+            x coordinates of the left and right boundary
         T: float
             Time of the end of the simulation
         dt: float
